@@ -1,10 +1,16 @@
 import discord
 from discord.ext import commands
 import os
+import aiomysql
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+IMAGE_BASE_URL = "https://chatty.site.je/uploads/"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -141,6 +147,58 @@ async def clear_error(ctx: commands.Context, error):
         await ctx.send("⚠️ จำนวนต้องเป็นตัวเลข เช่น `!w clear mr.a 20`", delete_after=5)
     else:
         raise error
+
+
+@bot.command(name="m")
+async def map_search(ctx: commands.Context, *, query: str):
+    """
+    ค้นหาด่านจากชื่อ (TH/EN/CN) แบบ LIKE
+
+    รูปแบบ:
+        !w m <ชื่อด่าน>
+    """
+    async with aiomysql.connect(
+        host=DB_HOST,
+        db=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        charset="utf8mb4",
+    ) as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            like = f"%{query}%"
+            await cur.execute(
+                "SELECT name_th, name_en, name_cn, image_path FROM stages "
+                "WHERE name_th LIKE %s OR name_en LIKE %s OR name_cn LIKE %s "
+                "LIMIT 5",
+                (like, like, like),
+            )
+            rows = await cur.fetchall()
+
+    if not rows:
+        await ctx.send(f"❌ ไม่พบด่านที่ตรงกับ `{query}`")
+        return
+
+    for row in rows:
+        title = row["name_th"] or row["name_en"] or "-"
+        embed = discord.Embed(title=title, color=0x5865F2)
+        embed.add_field(name="🇹🇭 TH", value=row["name_th"] or "-", inline=True)
+        embed.add_field(name="🇬🇧 EN", value=row["name_en"] or "-", inline=True)
+        embed.add_field(
+            name="🇨🇳 CN (copy ได้)",
+            value=f"```{row['name_cn']}```" if row["name_cn"] else "-",
+            inline=False,
+        )
+        if row["image_path"]:
+            embed.set_image(url=IMAGE_BASE_URL + row["image_path"])
+        await ctx.send(embed=embed)
+
+
+@map_search.error
+async def map_search_error(ctx: commands.Context, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("⚠️ ระบุชื่อด่านด้วย เช่น `!w m เขาไฟ`", delete_after=5)
+    else:
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
 
 
 bot.run(TOKEN)
