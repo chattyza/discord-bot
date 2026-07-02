@@ -181,6 +181,15 @@ async def map_search(ctx: commands.Context, *, query: str):
         await ctx.send(embed=embed)
 
 
+@bot.command(name="howto")
+async def howto(ctx: commands.Context):
+    embed = discord.Embed(title="📖 How To", color=0x5865F2)
+    embed.add_field(name="📥 Registration & Download", value="https://chatty.site.je/howto.php", inline=False)
+    embed.add_field(name="💳 Topup", value="https://chatty.site.je/topup.php", inline=False)
+    embed.add_field(name="🆔 CN ID", value="https://shorturl.at/zO1Yu", inline=False)
+    await ctx.send(embed=embed)
+
+
 @map_search.error
 async def map_search_error(ctx: commands.Context, error):
     if isinstance(error, commands.MissingRequiredArgument):
