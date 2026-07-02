@@ -1,16 +1,12 @@
 import discord
 from discord.ext import commands
 import os
-import aiomysql
+import aiohttp
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-IMAGE_BASE_URL = "https://chatty.site.je/uploads/"
+STAGES_API = "https://chatty.site.je/api/stages.php"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -152,44 +148,36 @@ async def clear_error(ctx: commands.Context, error):
 @bot.command(name="m")
 async def map_search(ctx: commands.Context, *, query: str):
     """
-    ค้นหาด่านจากชื่อ (TH/EN/CN) แบบ LIKE
+    ค้นหาด่านจากชื่อ (TH/EN/CN)
 
     รูปแบบ:
         !w m <ชื่อด่าน>
     """
-    async with aiomysql.connect(
-        host=DB_HOST,
-        db=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS,
-        charset="utf8mb4",
-    ) as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cur:
-            like = f"%{query}%"
-            await cur.execute(
-                "SELECT name_th, name_en, name_cn, image_path FROM stages "
-                "WHERE name_th LIKE %s OR name_en LIKE %s OR name_cn LIKE %s "
-                "LIMIT 5",
-                (like, like, like),
-            )
-            rows = await cur.fetchall()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(STAGES_API, params={"search": query, "limit": 5}) as resp:
+            if resp.status != 200:
+                await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
+                return
+            data = await resp.json()
 
-    if not rows:
+    stages = data.get("stages", [])
+    if not stages:
         await ctx.send(f"❌ ไม่พบด่านที่ตรงกับ `{query}`")
         return
 
-    for row in rows:
-        title = row["name_th"] or row["name_en"] or "-"
+    for stage in stages:
+        title = stage.get("name_th") or stage.get("name_en") or "-"
         embed = discord.Embed(title=title, color=0x5865F2)
-        embed.add_field(name="🇹🇭 TH", value=row["name_th"] or "-", inline=True)
-        embed.add_field(name="🇬🇧 EN", value=row["name_en"] or "-", inline=True)
+        embed.add_field(name="🇹🇭 TH", value=stage.get("name_th") or "-", inline=True)
+        embed.add_field(name="🇬🇧 EN", value=stage.get("name_en") or "-", inline=True)
+        cn = stage.get("name_cn")
         embed.add_field(
             name="🇨🇳 CN (copy ได้)",
-            value=f"```{row['name_cn']}```" if row["name_cn"] else "-",
+            value=f"```{cn}```" if cn else "-",
             inline=False,
         )
-        if row["image_path"]:
-            embed.set_image(url=IMAGE_BASE_URL + row["image_path"])
+        if stage.get("image_url"):
+            embed.set_image(url=stage["image_url"])
         await ctx.send(embed=embed)
 
 
