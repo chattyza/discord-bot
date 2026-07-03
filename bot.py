@@ -28,6 +28,41 @@ def find_member(guild: discord.Guild, name: str) -> discord.Member | None:
     return None
 
 
+def help_embed() -> discord.Embed:
+    embed = discord.Embed(title="📋 คำสั่งทั้งหมด", color=0x5865F2)
+    embed.add_field(
+        name="🗺️ ค้นหาด่าน",
+        value="`!w m <ชื่อด่าน>` — ค้นหาด่าน (TH/EN/CN)",
+        inline=False,
+    )
+    embed.add_field(
+        name="📖 คู่มือ",
+        value="`!w howto` — ลิงก์สมัคร / เติมเงิน / CN ID",
+        inline=False,
+    )
+    embed.add_field(
+        name="🗑️ ลบข้อความ (mod)",
+        value=(
+            "`!w clear <user> [n]` — ลบข้อความของ user ในช่องนี้\n"
+            "`!w clear all [n]` — ลบทุกข้อความในช่องนี้\n"
+            "`!w nuke <user>` — ลบข้อความของ user ทุก channel"
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="[ ] = optional  |  n = จำนวนข้อความ (default 100)")
+    return embed
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot:
+        return
+    if message.content.strip() == "!w":
+        await message.channel.send(embed=help_embed())
+        return
+    await bot.process_commands(message)
+
+
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
