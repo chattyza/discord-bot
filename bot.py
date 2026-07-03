@@ -193,7 +193,12 @@ async def map_search(ctx: commands.Context, *, query: str):
             if resp.status != 200:
                 await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
                 return
-            data = await resp.json()
+            try:
+                data = await resp.json(content_type=None)
+            except Exception:
+                raw = await resp.text()
+                await ctx.send(f"❌ API ส่ง response ผิดปกติ:\n```{raw[:500]}```", delete_after=30)
+                return
 
     stages = data.get("stages", [])
     if not stages:
