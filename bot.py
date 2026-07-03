@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-STAGES_API = "https://chatty.site.je/api/stages.php"
+STAGES_API = "https://chatty.site.je/api/stages.json"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -189,7 +189,7 @@ async def map_search(ctx: commands.Context, *, query: str):
         !w m <ชื่อด่าน>
     """
     async with aiohttp.ClientSession() as session:
-        async with session.get(STAGES_API, params={"search": query, "limit": 5}) as resp:
+        async with session.get(STAGES_API) as resp:
             if resp.status != 200:
                 await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
                 return
@@ -200,7 +200,14 @@ async def map_search(ctx: commands.Context, *, query: str):
                 await ctx.send(f"❌ API ส่ง response ผิดปกติ:\n```{raw[:500]}```", delete_after=30)
                 return
 
-    stages = data.get("stages", [])
+    q = query.lower()
+    all_stages = data.get("stages", [])
+    stages = [
+        s for s in all_stages
+        if q in (s.get("name_th") or "").lower()
+        or q in (s.get("name_en") or "").lower()
+        or q in (s.get("name_cn") or "").lower()
+    ][:5]
     if not stages:
         await ctx.send(f"❌ ไม่พบด่านที่ตรงกับ `{query}`")
         return
