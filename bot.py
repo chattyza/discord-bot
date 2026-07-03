@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-STAGES_API = "https://chatty.site.je/api/stages.json"
+STAGES_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/stages.json"
 
 intents = discord.Intents.default()
 intents.message_content = True
