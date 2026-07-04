@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 STAGES_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/stages.json"
+OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -243,6 +244,46 @@ async def map_search_error(ctx: commands.Context, error):
         await ctx.send("⚠️ ระบุชื่อด่านด้วย เช่น `!w m เขาไฟ`", delete_after=5)
     else:
         await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
+
+
+@bot.event
+async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
+    # ข้ามถ้าเป็นบอทเอง หรือไม่ใช่ ✅
+    if user.bot or str(reaction.emoji) != "✅":
+        return
+
+    message = reaction.message
+    # หา attachment ที่เป็นรูปภาพ
+    images = [a for a in message.attachments if a.content_type and a.content_type.startswith("image/")]
+    if not images:
+        return
+
+    async with aiohttp.ClientSession() as session:
+        for img in images[:3]:  # สูงสุด 3 รูปต่อข้อความ
+            payload = {
+                "url": img.url,
+                "apikey": OCR_API_KEY,
+                "language": "tha",       # Thai (รองรับ EN ในตัว)
+                "isOverlayRequired": False,
+                "OCREngine": 2,
+            }
+            async with session.post("https://api.ocr.space/parse/image", data=payload) as resp:
+                data = await resp.json()
+
+            results = data.get("ParsedResults", [])
+            if not results or data.get("IsErroredOnProcessing"):
+                await message.channel.send("❌ OCR ล้มเหลว ไม่สามารถอ่านข้อความจากรูปได้", delete_after=10)
+                continue
+
+            text = results[0].get("ParsedText", "").strip()
+            if not text:
+                await message.channel.send("⚠️ ไม่พบข้อความในรูป", delete_after=10)
+                continue
+
+            embed = discord.Embed(title="📝 ข้อความจากรูป", color=0x57F287)
+            embed.description = f"```{text[:3900]}```"
+            embed.set_footer(text=f"จาก: {img.filename}")
+            await message.channel.send(embed=embed)
 
 
 bot.run(TOKEN)
