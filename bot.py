@@ -259,20 +259,25 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         return
 
     async with aiohttp.ClientSession() as session:
-        for img in images[:3]:  # สูงสุด 3 รูปต่อข้อความ
-            payload = {
-                "url": img.url,
-                "apikey": OCR_API_KEY,
-                "language": "tha",       # Thai (รองรับ EN ในตัว)
-                "isOverlayRequired": False,
-                "OCREngine": 2,
-            }
-            async with session.post("https://api.ocr.space/parse/image", data=payload) as resp:
+        for img in images[:3]:
+            # ดาวน์โหลดรูปก่อน แล้วส่งเป็นไฟล์
+            async with session.get(img.url) as r:
+                img_bytes = await r.read()
+
+            form = aiohttp.FormData()
+            form.add_field("apikey", OCR_API_KEY)
+            form.add_field("language", "tha")
+            form.add_field("isOverlayRequired", "false")
+            form.add_field("OCREngine", "2")
+            form.add_field("file", img_bytes, filename=img.filename, content_type=img.content_type)
+
+            async with session.post("https://api.ocr.space/parse/image", data=form) as resp:
                 data = await resp.json()
 
             results = data.get("ParsedResults", [])
             if not results or data.get("IsErroredOnProcessing"):
-                await message.channel.send("❌ OCR ล้มเหลว ไม่สามารถอ่านข้อความจากรูปได้", delete_after=10)
+                err = data.get("ErrorMessage") or data.get("ErrorDetails") or "unknown"
+                await message.channel.send(f"❌ OCR ล้มเหลว: `{err}`", delete_after=10)
                 continue
 
             text = results[0].get("ParsedText", "").strip()
