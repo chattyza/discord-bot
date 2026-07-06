@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 STAGES_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/stages.json"
+DICT_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/dictionary.json"
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 intents = discord.Intents.default()
@@ -227,6 +228,57 @@ async def map_search(ctx: commands.Context, *, query: str):
         if stage.get("image_url"):
             embed.set_image(url=stage["image_url"])
         await ctx.send(embed=embed)
+
+
+@bot.command(name="d")
+async def dict_search(ctx: commands.Context, *, query: str):
+    """ค้นหาคำศัพท์ — !w d <คำ>"""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(DICT_API) as resp:
+            if resp.status != 200:
+                await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
+                return
+            try:
+                data = await resp.json(content_type=None)
+            except Exception:
+                raw = await resp.text()
+                await ctx.send(f"❌ response ผิดปกติ:\n```{raw[:300]}```", delete_after=15)
+                return
+
+    q = query.lower()
+    entries = data if isinstance(data, list) else data.get("dictionary", data.get("data", []))
+    results = [
+        e for e in entries
+        if q in (e.get("thai") or "").lower()
+        or q in (e.get("english") or "").lower()
+        or q in (e.get("chinese") or "").lower()
+    ][:8]
+
+    if not results:
+        await ctx.send(f"❌ ไม่พบคำที่ตรงกับ `{query}`")
+        return
+
+    lines = []
+    for e in results:
+        en = e.get("english") or "-"
+        cn = e.get("chinese") or "-"
+        lines.append(f"**{en}** — `{cn}`")
+
+    embed = discord.Embed(
+        title=f"📖 ผลค้นหา: {query}",
+        description="\n".join(lines),
+        color=0xFEE75C,
+    )
+    embed.set_footer(text="copy ได้โดยคลิกที่ข้อความใน ` `")
+    await ctx.send(embed=embed)
+
+
+@dict_search.error
+async def dict_search_error(ctx: commands.Context, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("⚠️ ระบุคำที่ต้องการค้นหาด้วย เช่น `!w d quantum`", delete_after=5)
+    else:
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
 
 
 @bot.command(name="howto")

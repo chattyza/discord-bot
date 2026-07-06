@@ -1,0 +1,78 @@
+{
+    "generated_at": "2026-07-06T23:11:16+07:00",
+    "count": 8,
+    "terms": [
+        {
+            "id": 9,
+            "thai": "GOW",
+            "english": "GOW",
+            "chinese": "战神",
+            "meaning": null,
+            "notes": null,
+            "category": null
+        },
+        {
+            "id": 10,
+            "thai": "Hell",
+            "english": "Hell",
+            "chinese": "炼狱",
+            "meaning": null,
+            "notes": null,
+            "category": null
+        },
+        {
+            "id": 8,
+            "thai": "legacy",
+            "english": "legacy",
+            "chinese": "传承",
+            "meaning": null,
+            "notes": null,
+            "category": null
+        },
+        {
+            "id": 5,
+            "thai": "Peak mode",
+            "english": "Peak mode",
+            "chinese": "巅峰",
+            "meaning": "",
+            "notes": "",
+            "category": null
+        },
+        {
+            "id": 11,
+            "thai": "อย่า AFK",
+            "english": "Pls Don't AFK",
+            "chinese": "拜托别挂机",
+            "meaning": "",
+            "notes": "",
+            "category": null
+        },
+        {
+            "id": 4,
+            "thai": "โหมดควันตัม",
+            "english": "Quantum",
+            "chinese": "量子",
+            "meaning": "",
+            "notes": "",
+            "category": null
+        },
+        {
+            "id": 6,
+            "thai": "superweapon",
+            "english": "superweapon",
+            "chinese": "超能",
+            "meaning": null,
+            "notes": null,
+            "category": null
+        },
+        {
+            "id": 7,
+            "thai": "tyrant",
+            "english": "tyrant",
+            "chinese": "暴君",
+            "meaning": null,
+            "notes": null,
+            "category": null
+        }
+    ]
+}
