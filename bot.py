@@ -38,8 +38,18 @@ def help_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
-        name="📖 คู่มือ",
+        name="📖 พจนานุกรม",
+        value="`!w d <คำ>` — ค้นหาคำศัพท์ EN/CN",
+        inline=False,
+    )
+    embed.add_field(
+        name="🔗 คู่มือ",
         value="`!w howto` — ลิงก์สมัคร / เติมเงิน / CN ID",
+        inline=False,
+    )
+    embed.add_field(
+        name="🖼️ OCR",
+        value="กด ✅ ที่รูปภาพ — แปลงรูปเป็น text",
         inline=False,
     )
     embed.add_field(
