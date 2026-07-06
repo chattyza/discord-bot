@@ -1,36 +1,26 @@
 import discord
 from discord.ext import commands
 import os
+import json
 import aiohttp
-import time
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-STAGES_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/stages.json"
-DICT_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/dictionary.json"
 OCR_API_KEY = os.getenv("OCR_API_KEY")
 
-# cache: { url: (data, timestamp) }
-_cache: dict = {}
-CACHE_TTL = 300  # 5 นาที
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-async def fetch_json(url: str) -> list | dict | None:
-    """ดึง JSON พร้อม in-memory cache 5 นาที"""
-    now = time.time()
-    if url in _cache:
-        data, ts = _cache[url]
-        if now - ts < CACHE_TTL:
-            return data
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status == 429:
-                return "rate_limited"
-            if resp.status != 200:
-                return None
-            data = await resp.json(content_type=None)
-    _cache[url] = (data, now)
-    return data
+def load_json(filename: str) -> list | dict | None:
+    """อ่านไฟล์ JSON จาก disk"""
+    path = os.path.join(BASE_DIR, filename)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception:
+        return None
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -222,17 +212,10 @@ async def map_search(ctx: commands.Context, *, query: str):
     รูปแบบ:
         !w m <ชื่อด่าน>
     """
-    async with aiohttp.ClientSession() as session:
-        async with session.get(STAGES_API) as resp:
-            if resp.status != 200:
-                await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
-                return
-            try:
-                data = await resp.json(content_type=None)
-            except Exception:
-                raw = await resp.text()
-                await ctx.send(f"❌ API ส่ง response ผิดปกติ:\n```{raw[:500]}```", delete_after=30)
-                return
+    data = load_json("stages.json")
+    if data is None:
+        await ctx.send("❌ โหลด stages.json ไม่ได้", delete_after=10)
+        return
 
     q = query.lower()
     all_stages = data.get("stages", [])
@@ -265,12 +248,9 @@ async def map_search(ctx: commands.Context, *, query: str):
 @bot.command(name="d")
 async def dict_search(ctx: commands.Context, *, query: str = ""):
     """ค้นหาคำศัพท์ — !w d [คำ]"""
-    data = await fetch_json(DICT_API)
-    if data == "rate_limited":
-        await ctx.send("⚠️ โดน rate limit ชั่วคราว ลองใหม่อีกครั้งครับ", delete_after=10)
-        return
+    data = load_json("dictionary.json")
     if data is None:
-        await ctx.send("❌ ดึงข้อมูลไม่ได้", delete_after=10)
+        await ctx.send("❌ โหลด dictionary.json ไม่ได้", delete_after=10)
         return
 
     entries = data if isinstance(data, list) else data.get("dictionary", data.get("data", []))
