@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import os
 import aiohttp
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,6 +10,27 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 STAGES_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/stages.json"
 DICT_API = "https://raw.githubusercontent.com/chattyza/discord-bot/master/dictionary.json"
 OCR_API_KEY = os.getenv("OCR_API_KEY")
+
+# cache: { url: (data, timestamp) }
+_cache: dict = {}
+CACHE_TTL = 300  # 5 นาที
+
+async def fetch_json(url: str) -> list | dict | None:
+    """ดึง JSON พร้อม in-memory cache 5 นาที"""
+    now = time.time()
+    if url in _cache:
+        data, ts = _cache[url]
+        if now - ts < CACHE_TTL:
+            return data
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            if resp.status == 429:
+                return "rate_limited"
+            if resp.status != 200:
+                return None
+            data = await resp.json(content_type=None)
+    _cache[url] = (data, now)
+    return data
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -241,54 +263,56 @@ async def map_search(ctx: commands.Context, *, query: str):
 
 
 @bot.command(name="d")
-async def dict_search(ctx: commands.Context, *, query: str):
-    """ค้นหาคำศัพท์ — !w d <คำ>"""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(DICT_API) as resp:
-            if resp.status != 200:
-                await ctx.send(f"❌ API error: HTTP {resp.status}", delete_after=10)
-                return
-            try:
-                data = await resp.json(content_type=None)
-            except Exception:
-                raw = await resp.text()
-                await ctx.send(f"❌ response ผิดปกติ:\n```{raw[:300]}```", delete_after=15)
-                return
+async def dict_search(ctx: commands.Context, *, query: str = ""):
+    """ค้นหาคำศัพท์ — !w d [คำ]"""
+    data = await fetch_json(DICT_API)
+    if data == "rate_limited":
+        await ctx.send("⚠️ โดน rate limit ชั่วคราว ลองใหม่อีกครั้งครับ", delete_after=10)
+        return
+    if data is None:
+        await ctx.send("❌ ดึงข้อมูลไม่ได้", delete_after=10)
+        return
 
-    q = query.lower()
     entries = data if isinstance(data, list) else data.get("dictionary", data.get("data", []))
-    results = [
-        e for e in entries
-        if q in (e.get("thai") or "").lower()
-        or q in (e.get("english") or "").lower()
-        or q in (e.get("chinese") or "").lower()
-    ][:8]
+
+    if query:
+        q = query.lower()
+        results = [
+            e for e in entries
+            if q in (e.get("thai") or "").lower()
+            or q in (e.get("english") or "").lower()
+            or q in (e.get("chinese") or "").lower()
+        ]
+        title = f"📖 ผลค้นหา: {query}"
+    else:
+        results = entries
+        title = "📖 คำศัพท์ทั้งหมด"
 
     if not results:
         await ctx.send(f"❌ ไม่พบคำที่ตรงกับ `{query}`")
         return
 
-    lines = []
-    for e in results:
-        en = e.get("english") or "-"
-        cn = e.get("chinese") or "-"
-        lines.append(f"**{en}** — `{cn}`")
-
-    embed = discord.Embed(
-        title=f"📖 ผลค้นหา: {query}",
-        description="\n".join(lines),
-        color=0xFEE75C,
-    )
-    embed.set_footer(text="copy ได้โดยคลิกที่ข้อความใน ` `")
-    await ctx.send(embed=embed)
+    # แบ่งส่งทีละ 20 รายการ ถ้ามีเยอะ
+    chunk = 20
+    for i in range(0, min(len(results), 100), chunk):
+        lines = []
+        for e in results[i:i+chunk]:
+            en = e.get("english") or "-"
+            cn = e.get("chinese") or "-"
+            lines.append(f"**{en}** — `{cn}`")
+        embed = discord.Embed(
+            title=title if i == 0 else "",
+            description="\n".join(lines),
+            color=0xFEE75C,
+        )
+        if i == 0:
+            embed.set_footer(text=f"ทั้งหมด {len(results)} คำ | copy ได้ที่ ` `")
+        await ctx.send(embed=embed)
 
 
 @dict_search.error
 async def dict_search_error(ctx: commands.Context, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("⚠️ ระบุคำที่ต้องการค้นหาด้วย เช่น `!w d quantum`", delete_after=5)
-    else:
-        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
+    await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
 
 
 @bot.command(name="howto")
