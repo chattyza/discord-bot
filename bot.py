@@ -253,7 +253,7 @@ async def dict_search(ctx: commands.Context, *, query: str = ""):
         await ctx.send("❌ โหลด dictionary.json ไม่ได้", delete_after=10)
         return
 
-    entries = data if isinstance(data, list) else data.get("dictionary", data.get("data", []))
+    entries = data if isinstance(data, list) else data.get("terms", data.get("dictionary", data.get("data", [])))
 
     if query:
         q = query.lower()
