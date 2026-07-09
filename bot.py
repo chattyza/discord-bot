@@ -307,9 +307,10 @@ async def howto(ctx: commands.Context):
 @map_search.error
 async def map_search_error(ctx: commands.Context, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("⚠️ ระบุชื่อด่านด้วย เช่น `!w m เขาไฟ`", delete_after=5)
+        await ctx.send("⚠️ ระบุชื่อด่านด้วย เช่น `!w m เขาไฟ`")
     else:
-        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`")
+        raise error
 
 
 @bot.event
