@@ -1,10 +1,10 @@
 {
-    "generated_at": "2026-07-03T20:47:13+07:00",
-    "count": 64,
+    "generated_at": "2026-07-09T18:37:33+07:00",
+    "count": 63,
     "stages": [
         {
             "id": 8,
-            "name_th": "Abandoned Port Shockwave",
+            "name_th": "หมาป่า2ตัว",
             "name_en": "Abandoned Port Shockwave",
             "name_cn": "废港惊潮",
             "description": "",
@@ -18,7 +18,7 @@
         },
         {
             "id": 51,
-            "name_th": "Ancient Tianshan Ritual",
+            "name_th": "บอสงู3หัว",
             "name_en": "Ancient Tianshan Ritual",
             "name_cn": "天山古祭",
             "description": "",
@@ -32,7 +32,7 @@
         },
         {
             "id": 43,
-            "name_th": "Apocalyptic Princess Battle",
+            "name_th": "มาดาม \/ นางอิจฉา",
             "name_en": "Apocalyptic Princess Battle",
             "name_cn": "灭世姬战",
             "description": "",
@@ -46,7 +46,7 @@
         },
         {
             "id": 19,
-            "name_th": "Arctic Operation",
+            "name_th": "หลบเครื่องบินทิ้งระเบิด",
             "name_en": "Arctic Operation",
             "name_cn": "北极行动",
             "description": "",
@@ -60,7 +60,7 @@
         },
         {
             "id": 13,
-            "name_th": "Barbarossa",
+            "name_th": "รถถัง",
             "name_en": "Barbarossa",
             "name_cn": "巴巴罗萨",
             "description": "",
@@ -74,7 +74,7 @@
         },
         {
             "id": 11,
-            "name_th": "Blackstone Operation",
+            "name_th": "บอสโดรนกลมๆ",
             "name_en": "Blackstone Operation",
             "name_cn": "黑石行动",
             "description": "",
@@ -102,7 +102,7 @@
         },
         {
             "id": 50,
-            "name_th": "Blood Sea Nest",
+            "name_th": "ตามหญิงชุดแดง2",
             "name_en": "Blood Sea Nest",
             "name_cn": "血海迷巢",
             "description": "",
@@ -116,7 +116,7 @@
         },
         {
             "id": 26,
-            "name_th": "Blood Wolf Maze City",
+            "name_th": "หมาป่ายักษ์ \/ ไขปริศนา",
             "name_en": "Blood Wolf Maze City",
             "name_cn": "血狼迷城",
             "description": "",
@@ -130,7 +130,7 @@
         },
         {
             "id": 49,
-            "name_th": "Bloodstained Church",
+            "name_th": "โบสถ์ร้าง",
             "name_en": "Bloodstained Church",
             "name_cn": "血色教堂",
             "description": "",
@@ -144,7 +144,7 @@
         },
         {
             "id": 39,
-            "name_th": "Brave Forbidden Zone",
+            "name_th": "ด่านที่ไม่มีป้อม",
             "name_en": "Brave Forbidden Zone",
             "name_cn": "勇闯禁区",
             "description": "",
@@ -172,7 +172,7 @@
         },
         {
             "id": 44,
-            "name_th": "Core Pulse Extinction",
+            "name_th": "คารี่หุ่น",
             "name_en": "Core Pulse Extinction",
             "name_cn": "芯脉绝迹",
             "description": "",
@@ -186,7 +186,7 @@
         },
         {
             "id": 5,
-            "name_th": "Crisis Pursuit",
+            "name_th": "หุ่นขาแมงมุมแดง",
             "name_en": "Crisis Pursuit",
             "name_cn": "危局追绳",
             "description": "",
@@ -228,7 +228,7 @@
         },
         {
             "id": 30,
-            "name_th": "Dawn Horror",
+            "name_th": "เที่ยวห้าง",
             "name_en": "Dawn Horror",
             "name_cn": "黎明惊魂",
             "description": "",
@@ -242,7 +242,7 @@
         },
         {
             "id": 66,
-            "name_th": "Dawn Shadow of the Ancient Tomb",
+            "name_th": "สุสาน \/ ตำหนักเสี่นอ้วน",
             "name_en": "Dawn Shadow of the Ancient Tomb",
             "name_cn": "古墓曙影",
             "description": "",
@@ -284,7 +284,7 @@
         },
         {
             "id": 23,
-            "name_th": "Deep Sea Slumber",
+            "name_th": "ใต้ทะเล \/ บอสโกเลม",
             "name_en": "Deep Sea Slumber",
             "name_cn": "深海沉眠",
             "description": "",
@@ -312,7 +312,7 @@
         },
         {
             "id": 29,
-            "name_th": "Desolate City Insect Swarm",
+            "name_th": "บอสแมงมุม",
             "name_en": "Desolate City Insect Swarm",
             "name_cn": "荒城虫潮",
             "description": "",
@@ -340,7 +340,7 @@
         },
         {
             "id": 37,
-            "name_th": "Desperate Beast Garden",
+            "name_th": "บอสจระเข้ควันพิษ",
             "name_en": "Desperate Beast Garden",
             "name_cn": "绝望兽苑",
             "description": "",
@@ -396,7 +396,7 @@
         },
         {
             "id": 12,
-            "name_th": "Empire Showdown",
+            "name_th": "รถถัง \/ หุ่นแดง4แขน",
             "name_en": "Empire Showdown",
             "name_cn": "帝国决战",
             "description": "",
@@ -410,7 +410,7 @@
         },
         {
             "id": 31,
-            "name_th": "Fatal Chase",
+            "name_th": "จระเข้",
             "name_en": "Fatal Chase",
             "name_cn": "夺命追击",
             "description": "",
@@ -438,7 +438,7 @@
         },
         {
             "id": 62,
-            "name_th": "luna",
+            "name_th": "luna \/ เสี่ยอ้วน",
             "name_en": "Ghost Town of Lost Souls",
             "name_cn": "亡魂古镇",
             "description": "",
@@ -452,7 +452,7 @@
         },
         {
             "id": 24,
-            "name_th": "Haunted Filter Tree",
+            "name_th": "รดน้ำต้นไม้ \/ ทางรถไฟใต้ดิน",
             "name_en": "Haunted Filter Tree",
             "name_cn": "滤树惊魂",
             "description": "",
@@ -466,7 +466,7 @@
         },
         {
             "id": 7,
-            "name_th": "Heroic Operation",
+            "name_th": "โจรใต้ร่างทอง",
             "name_en": "Heroic Operation",
             "name_cn": "勇者行动",
             "description": "",
@@ -480,7 +480,7 @@
         },
         {
             "id": 33,
-            "name_th": "Illusory Moon in Mirror Water",
+            "name_th": "ช่วยเจ้าหญิงไฟ",
             "name_en": "Illusory Moon in Mirror Water",
             "name_cn": "镜花水月",
             "description": "",
@@ -494,7 +494,7 @@
         },
         {
             "id": 10,
-            "name_th": "หุ่น",
+            "name_th": "หุ่น \/ ข้ามถนน",
             "name_en": "Iron Fortress",
             "name_cn": "钢铁要塞",
             "description": "",
@@ -508,7 +508,7 @@
         },
         {
             "id": 15,
-            "name_th": "Ironblood Island Seizure",
+            "name_th": "เกาะ \/ หุ่นยักษ์2ตัว",
             "name_en": "Ironblood Island Seizure",
             "name_cn": "铁骑夺岛",
             "description": "",
@@ -522,7 +522,7 @@
         },
         {
             "id": 28,
-            "name_th": "Lost City",
+            "name_th": "บอสแรด",
             "name_en": "Lost City",
             "name_cn": "失落之城",
             "description": "",
@@ -536,7 +536,7 @@
         },
         {
             "id": 42,
-            "name_th": "Matrix Revolution",
+            "name_th": "ขี่หุ่น กันเกจ",
             "name_en": "Matrix Revolution",
             "name_cn": "矩阵革命",
             "description": "",
@@ -550,7 +550,7 @@
         },
         {
             "id": 46,
-            "name_th": "Maya Secret Realm",
+            "name_th": "แรด2ตัว \/ บนดิน",
             "name_en": "Maya Secret Realm",
             "name_cn": "玛雅秘境",
             "description": "",
@@ -564,7 +564,7 @@
         },
         {
             "id": 45,
-            "name_th": "Maya Underground Palace",
+            "name_th": "แรด2ตัว \/ ใต้ดิน",
             "name_en": "Maya Underground Palace",
             "name_cn": "玛雅地宫",
             "description": "",
@@ -578,7 +578,7 @@
         },
         {
             "id": 16,
-            "name_th": "Mecha Frenzy",
+            "name_th": "เฮลิคอปเตอร์",
             "name_en": "Mecha Frenzy",
             "name_cn": "机甲狂潮",
             "description": "",
@@ -592,7 +592,7 @@
         },
         {
             "id": 52,
-            "name_th": "Midnight Rome",
+            "name_th": "บอสต้นไม้",
             "name_en": "Midnight Rome",
             "name_cn": "午夜罗马",
             "description": "",
@@ -606,7 +606,7 @@
         },
         {
             "id": 38,
-            "name_th": "Moonshadow Fantasy City",
+            "name_th": "หุ่นเดินชมจันทร์",
             "name_en": "Moonshadow Fantasy City",
             "name_cn": "月影幻城",
             "description": "",
@@ -620,7 +620,7 @@
         },
         {
             "id": 6,
-            "name_th": "Pandemic Legacy Hunt",
+            "name_th": "ตามหญิงชุดแดง1",
             "name_en": "Pandemic Legacy Hunt",
             "name_cn": "疫遗追捕",
             "description": "",
@@ -648,7 +648,7 @@
         },
         {
             "id": 47,
-            "name_th": "Polar Storm",
+            "name_th": "ขั้วโลกเหนือ",
             "name_en": "Polar Storm",
             "name_cn": "极地风云",
             "description": "",
@@ -662,7 +662,7 @@
         },
         {
             "id": 63,
-            "name_th": "Prison of the Dead",
+            "name_th": "บอสค้อนแอนเดอะแก็งค์ \/ คุก",
             "name_en": "Prison of the Dead",
             "name_cn": "亡者监狱",
             "description": "",
@@ -676,7 +676,7 @@
         },
         {
             "id": 34,
-            "name_th": "Queen’s Forbidden Land",
+            "name_th": "คลีโอพัตรา มัมมี่",
             "name_en": "Queen’s Forbidden Land",
             "name_cn": "女王禁地",
             "description": "",
@@ -690,7 +690,7 @@
         },
         {
             "id": 14,
-            "name_th": "Raging Sea Clash",
+            "name_th": "หุ่นไดโนเสาร์",
             "name_en": "Raging Sea Clash",
             "name_cn": "怒海争锋",
             "description": "",
@@ -732,7 +732,7 @@
         },
         {
             "id": 64,
-            "name_th": "Shocking Lone Island",
+            "name_th": "บอสค้อนแอนเดอะแก็งค์",
             "name_en": "Shocking Lone Island",
             "name_cn": "孤岛惊魂",
             "description": "",
@@ -760,7 +760,7 @@
         },
         {
             "id": 25,
-            "name_th": "Sky City",
+            "name_th": "วิหารสายรุ้ง",
             "name_en": "Sky City",
             "name_cn": "天空之城",
             "description": "",
@@ -774,7 +774,7 @@
         },
         {
             "id": 32,
-            "name_th": "Snowfield Crisis",
+            "name_th": "โรงงานน้ำเขียว",
             "name_en": "Snowfield Crisis",
             "name_cn": "雪域危机",
             "description": "",
@@ -802,7 +802,7 @@
         },
         {
             "id": 41,
-            "name_th": "Soldiers at the City Gates",
+            "name_th": "นาซี \/ หุ่นเลเซอร์",
             "name_en": "Soldiers at the City Gates",
             "name_cn": "兵临城下",
             "description": "",
@@ -872,7 +872,7 @@
         },
         {
             "id": 40,
-            "name_th": "Wind Raid",
+            "name_th": "จูเลียกับหมี",
             "name_en": "Wind Raid",
             "name_cn": "随风突袭",
             "description": "",
@@ -883,20 +883,6 @@
             "slug": "wind-raid",
             "image_path": "20260701_190311_b7040fd0dd4e.png",
             "image_url": "https:\/\/chatty.site.je\/uploads\/stages\/20260701_190311_b7040fd0dd4e.png"
-        },
-        {
-            "id": 67,
-            "name_th": "xxxx",
-            "name_en": "xxx",
-            "name_cn": "xxx",
-            "description": "xxx",
-            "tags": "",
-            "game": "Blackfire",
-            "game_slug": "blackfire",
-            "mode": "Defense",
-            "slug": "xxx",
-            "image_path": null,
-            "image_url": "https:\/\/chatty.site.je\/assets\/img\/placeholder.svg"
         }
     ]
 }
