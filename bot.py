@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import os
 import json
+import urllib.parse
 import aiohttp
 from dotenv import load_dotenv
 
@@ -63,6 +64,11 @@ def help_embed() -> discord.Embed:
     embed.add_field(
         name="🖼️ OCR",
         value="กด ✅ ที่รูปภาพ — แปลงรูปเป็น text",
+        inline=False,
+    )
+    embed.add_field(
+        name="🔍 ค้นหารูปภาพ",
+        value="กด 🖕 ที่รูปภาพ — ส่งลิงก์ค้นหารูปนั้นด้วย Google Lens",
         inline=False,
     )
     embed.add_field(
@@ -314,13 +320,42 @@ async def map_search_error(ctx: commands.Context, error):
         raise error
 
 
+def find_message_image_urls(message: discord.Message) -> list[str]:
+    """หา URL รูปภาพทั้งหมดในข้อความ (ทั้งไฟล์แนบ และรูปใน embed/link preview)"""
+    urls = []
+    for a in message.attachments:
+        if a.content_type and a.content_type.startswith("image/"):
+            urls.append(a.url)
+    for e in message.embeds:
+        if e.image and e.image.url:
+            urls.append(e.image.url)
+        elif e.thumbnail and e.thumbnail.url:
+            urls.append(e.thumbnail.url)
+    return urls
+
+
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
-    # ข้ามถ้าเป็นบอทเอง หรือไม่ใช่ ✅
-    if user.bot or str(reaction.emoji) != "✅":
+    if user.bot:
         return
 
+    emoji = str(reaction.emoji)
     message = reaction.message
+
+    # --- 🖕 : ค้นหารูปด้วย Google Lens (reverse image search) ---
+    if emoji == "🖕":
+        urls = find_message_image_urls(message)
+        if not urls:
+            return
+        for url in urls[:3]:
+            lens_url = "https://lens.google.com/uploadbyurl?url=" + urllib.parse.quote(url, safe="")
+            await message.channel.send(f"🔍 ค้นหารูปนี้ด้วย Google Lens: {lens_url}")
+        return
+
+    # --- ✅ : OCR แปลงรูปเป็นข้อความ ---
+    if emoji != "✅":
+        return
+
     # หา attachment ที่เป็นรูปภาพ
     images = [a for a in message.attachments if a.content_type and a.content_type.startswith("image/")]
     if not images:

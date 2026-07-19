@@ -4,12 +4,13 @@
 
 ## ภาพรวม
 
-Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 4 อย่าง:
+Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 5 อย่าง:
 
 1. ค้นหาชื่อด่าน (TH/EN/CN) จาก `stages.json`
 2. ค้นหาคำศัพท์เกม (TH/EN/CN) จาก `dictionary.json`
 3. OCR แปลงรูปภาพเป็นข้อความ (ผ่าน ocr.space API) เมื่อมีคนกด reaction ✅ บนรูป
-4. เครื่องมือ mod: ลบข้อความของ user (`clear`, `nuke`)
+4. ค้นหารูปภาพด้วย Google Lens เมื่อมีคนกด reaction 🖕 บนรูป
+5. เครื่องมือ mod: ลบข้อความของ user (`clear`, `nuke`)
 
 Repo: `https://github.com/chattyza/discord-bot`
 
@@ -57,6 +58,7 @@ Repo: `https://github.com/chattyza/discord-bot`
 | `!w d [คำ]` | ค้นหาคำศัพท์ (ไม่ใส่คำ = แสดงทั้งหมด, สูงสุด 100 รายการ) |
 | `!w howto` | ลิงก์สมัคร/เติมเงิน/CN ID |
 | กด ✅ บนรูปภาพ | OCR แปลงรูปเป็นข้อความ (ภาษาไทย, สูงสุด 3 รูปต่อครั้ง) |
+| กด 🖕 บนรูปภาพ | ส่งลิงก์ค้นหารูปนั้นด้วย Google Lens (reverse image search, สูงสุด 3 รูปต่อครั้ง) |
 | `!w clear <user\|all> [n]` | ลบข้อความ (ต้องมีสิทธิ์ Manage Messages), default 100, สูงสุด 1000 |
 | `!w nuke <user>` | ลบข้อความของ user คนนั้นทุก channel (สแกน 500 ข้อความล่าสุดต่อ channel) |
 
@@ -97,6 +99,12 @@ Repo: `https://github.com/chattyza/discord-bot`
 3. `git add` + `git commit` + `git push origin master`
 
 บอทโหลด JSON จาก disk ทุกครั้งที่มีคำสั่ง (ไม่ cache ในหน่วยความจำ) ดังนั้น push เสร็จแล้วต้อง **restart บอท** (หรือถ้า deploy บน host ที่ pull auto ก็ให้ pull ก่อน) ค่าใหม่ถึงจะมีผล
+
+## ฟีเจอร์ค้นหารูปภาพ (Google Lens)
+
+กด reaction 🖕 บนข้อความที่มีรูปภาพ (ไฟล์แนบ หรือรูปใน embed/link preview) บอทจะตอบกลับเป็นลิงก์ `https://lens.google.com/uploadbyurl?url=<image_url>` ให้กดเข้าไปดูผลค้นหาบน Google Lens ได้เลย
+
+ทำงานแบบนี้เพราะ Google ไม่มี Lens API สาธารณะให้ใช้ตรงๆ (มีแต่บริการ third-party อย่าง SerpApi ที่คิดเงิน) แต่ endpoint `uploadbyurl` เป็นลิงก์เดียวกับที่ browser ใช้ตอนกด "Search image with Google Lens" อยู่แล้ว บอทแค่สร้างลิงก์นี้ให้ ไม่ได้ scrape หรือประมวลผลอะไรเอง จึงไม่มีค่าใช้จ่าย ไม่มี API key ต้องตั้งค่า และไม่เสี่ยงโดน rate limit/บล็อกแบบที่เจอกับ YouTube
 
 ## Setup เครื่องใหม่
 
