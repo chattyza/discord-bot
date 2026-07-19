@@ -2,106 +2,15 @@ import discord
 from discord.ext import commands
 import os
 import json
-import base64
-import asyncio
-import functools
-from collections import deque
 import aiohttp
-import yt_dlp
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
-FFMPEG_EXECUTABLE = os.getenv("FFMPEG_PATH", "ffmpeg")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- Music ---
-# YouTube บล็อกการดึงเสียงแบบไม่ login มากขึ้นเรื่อยๆ (LOGIN_REQUIRED / "Sign in to confirm you're not a bot")
-# แก้โดยใช้ cookies จากบัญชี YouTube จริง (แนะนำบัญชีที่มี YouTube Premium เพราะเชื่อถือได้กว่า)
-# วิธีตั้งค่า: ดู project_bible.md หัวข้อ "แก้ปัญหา YouTube bot detection"
-COOKIES_PATH = os.path.join(BASE_DIR, "cookies.txt")
-_cookies_b64 = os.getenv("YT_COOKIES_B64")  # แนะนำ: ค่าเดียวบรรทัดเดียว วางใน Railway ไม่มีพัง
-_cookies_raw = os.getenv("YT_COOKIES")      # เผื่อไว้ (แบบเก่า วางหลายบรรทัด เสี่ยง copy-paste ผิด)
-if not os.path.exists(COOKIES_PATH):
-    if _cookies_b64:
-        with open(COOKIES_PATH, "wb") as f:
-            f.write(base64.b64decode(_cookies_b64))
-    elif _cookies_raw:
-        with open(COOKIES_PATH, "w", encoding="utf-8") as f:
-            f.write(_cookies_raw)
-
-# Debug log: ไม่พิมพ์เนื้อหาไฟล์ (secret) แค่ยืนยันว่าโหลดสำเร็จ/ขนาดไฟล์ ดูได้ใน Railway > Deployments > logs
-if os.path.exists(COOKIES_PATH):
-    print(f"✅ cookies.txt พร้อมใช้งาน ({os.path.getsize(COOKIES_PATH)} bytes) source={'YT_COOKIES_B64' if _cookies_b64 else ('YT_COOKIES' if _cookies_raw else 'local file')}")
-else:
-    print("⚠️ ไม่พบ cookies.txt และไม่มี YT_COOKIES_B64/YT_COOKIES — คำสั่งเพลงจากยูทูปน่าจะโดนบล็อก")
-
-YTDL_OPTIONS = {
-    "format": "bestaudio/best",
-    "noplaylist": True,
-    "quiet": True,
-    "default_search": "ytsearch",
-    "source_address": "0.0.0.0",
-    # YouTube เปลี่ยนไปใช้ SABR streaming ทำให้บาง format โดนซ่อนถ้าไม่มี PO token
-    # "missing_pot" สั่งให้ yt-dlp ยอมใช้ format พวกนี้แทนที่จะเมิน (อาจมีบางคลิปเล่นสะดุด/โหลดช้ากว่าปกติ)
-    "extractor_args": {"youtube": {"formats": ["missing_pot"]}},
-}
-if os.path.exists(COOKIES_PATH):
-    YTDL_OPTIONS["cookiefile"] = COOKIES_PATH
-
-FFMPEG_OPTIONS = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn",
-}
-
-ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
-
-music_queues: dict[int, deque] = {}   # guild_id -> deque ของเพลงที่รอเล่น
-
-
-def get_queue(guild_id: int) -> deque:
-    return music_queues.setdefault(guild_id, deque())
-
-
-async def extract_track(query: str) -> dict:
-    """ค้นหา/แปลง query (ชื่อเพลงหรือ URL) เป็นข้อมูลเพลงที่เล่นได้ (รันแบบ blocking ใน executor)"""
-    loop = asyncio.get_event_loop()
-    partial = functools.partial(ytdl.extract_info, query, download=False)
-    data = await loop.run_in_executor(None, partial)
-    if "entries" in data:
-        if not data["entries"]:
-            raise ValueError("ไม่พบผลลัพธ์")
-        data = data["entries"][0]
-    return {
-        "title": data.get("title", "ไม่ทราบชื่อเพลง"),
-        "url": data["url"],
-        "webpage_url": data.get("webpage_url", query),
-    }
-
-
-async def play_next(ctx: commands.Context):
-    guild_id = ctx.guild.id
-    queue = get_queue(guild_id)
-    voice_client = ctx.voice_client
-    if not queue or voice_client is None:
-        return
-
-    track = queue.popleft()
-    source = discord.FFmpegPCMAudio(track["url"], executable=FFMPEG_EXECUTABLE, **FFMPEG_OPTIONS)
-
-    def _after(error: Exception | None):
-        if error:
-            print(f"⚠️ Player error: {error}")
-        fut = asyncio.run_coroutine_threadsafe(play_next(ctx), ctx.bot.loop)
-        try:
-            fut.result()
-        except Exception as e:
-            print(f"⚠️ play_next error: {e}")
-
-    voice_client.play(source, after=_after)
-    await ctx.send(f"🎶 กำลังเล่น: **{track['title']}**")
 
 def load_json(filename: str) -> list | dict | None:
     """อ่านไฟล์ JSON จาก disk"""
@@ -154,16 +63,6 @@ def help_embed() -> discord.Embed:
     embed.add_field(
         name="🖼️ OCR",
         value="กด ✅ ที่รูปภาพ — แปลงรูปเป็น text",
-        inline=False,
-    )
-    embed.add_field(
-        name="🎵 เพลง",
-        value=(
-            "`!w play <ชื่อเพลง/URL>` — เล่นเพลง (ต้องอยู่ในห้องเสียงก่อน)\n"
-            "`!w pause` — หยุด/เล่นต่อ (toggle)\n"
-            "`!w stop` — หยุดและออกจากห้องเสียง\n"
-            "_(บอทจะออกจากห้องเองถ้าทุกคนออกหมด)_"
-        ),
         inline=False,
     )
     embed.add_field(
@@ -404,97 +303,6 @@ async def howto(ctx: commands.Context):
     embed.add_field(name="💳 Topup", value="https://chatty.site.je/topup.php", inline=False)
     embed.add_field(name="🆔 CN ID", value="https://shorturl.at/zO1Yu", inline=False)
     await ctx.send(embed=embed)
-
-
-@bot.command(name="play")
-async def play(ctx: commands.Context, *, query: str):
-    """
-    เล่นเพลง — !w play <ชื่อเพลง หรือ URL YouTube>
-
-    ถ้ามีเพลงเล่นอยู่แล้ว จะเพิ่มเข้าคิวแทน
-    """
-    if ctx.author.voice is None or ctx.author.voice.channel is None:
-        await ctx.send("⚠️ ต้องเข้าห้องเสียงก่อนถึงจะใช้คำสั่งนี้ได้", delete_after=8)
-        return
-
-    voice_channel = ctx.author.voice.channel
-    voice_client = ctx.voice_client
-    if voice_client is None:
-        voice_client = await voice_channel.connect()
-    elif voice_client.channel != voice_channel:
-        await voice_client.move_to(voice_channel)
-
-    async with ctx.typing():
-        try:
-            track = await extract_track(query)
-        except Exception as e:
-            await ctx.send(f"❌ หาเพลงไม่เจอ: `{e}`", delete_after=10)
-            return
-
-    get_queue(ctx.guild.id).append(track)
-
-    if voice_client.is_playing() or voice_client.is_paused():
-        await ctx.send(f"➕ เพิ่มเข้าคิว: **{track['title']}**")
-    else:
-        await play_next(ctx)
-
-
-@play.error
-async def play_error(ctx: commands.Context, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("⚠️ ระบุชื่อเพลงหรือ URL ด้วย เช่น `!w play imagine dragons believer`", delete_after=8)
-    else:
-        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
-        raise error
-
-
-@bot.command(name="pause")
-async def pause(ctx: commands.Context):
-    """หยุดเพลงชั่วคราว / เล่นต่อ — !w pause (toggle)"""
-    voice_client = ctx.voice_client
-    if voice_client is None or not (voice_client.is_playing() or voice_client.is_paused()):
-        await ctx.send("⚠️ ไม่มีเพลงกำลังเล่นอยู่", delete_after=5)
-        return
-
-    if voice_client.is_playing():
-        voice_client.pause()
-        await ctx.send("⏸️ หยุดเพลงชั่วคราวแล้ว (พิมพ์ `!w pause` อีกครั้งเพื่อเล่นต่อ)")
-    else:
-        voice_client.resume()
-        await ctx.send("▶️ เล่นเพลงต่อ")
-
-
-@bot.command(name="stop")
-async def stop(ctx: commands.Context):
-    """หยุดเพลงและออกจากห้องเสียง — !w stop"""
-    voice_client = ctx.voice_client
-    if voice_client is None:
-        await ctx.send("⚠️ บอทไม่ได้อยู่ในห้องเสียง", delete_after=5)
-        return
-
-    get_queue(ctx.guild.id).clear()
-    voice_client.stop()
-    await voice_client.disconnect()
-    await ctx.send("⏹️ หยุดเพลงและออกจากห้องเสียงแล้ว")
-
-
-@bot.event
-async def on_voice_state_update(
-    member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
-):
-    """ออกจากห้องเสียงอัตโนมัติ ถ้าเหลือบอทอยู่คนเดียว (ทุกคนออกหมด)"""
-    if before.channel is None:
-        return  # สนใจเฉพาะตอนมีคน "ออกจาก"/"ย้ายออกจาก" ห้อง
-
-    guild = before.channel.guild
-    voice_client = guild.voice_client
-    if voice_client is None or voice_client.channel != before.channel:
-        return  # บอทไม่ได้อยู่ในห้องที่มีคนออก
-
-    humans_left = [m for m in before.channel.members if not m.bot]
-    if not humans_left:
-        get_queue(guild.id).clear()
-        await voice_client.disconnect()
 
 
 @map_search.error

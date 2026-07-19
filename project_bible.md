@@ -1,16 +1,15 @@
 # Project Bible — Discord Bot (Blackfire Helper)
 
-อัปเดตล่าสุด: 2026-07-17
+อัปเดตล่าสุด: 2026-07-19
 
 ## ภาพรวม
 
-Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 5 อย่าง:
+Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 4 อย่าง:
 
 1. ค้นหาชื่อด่าน (TH/EN/CN) จาก `stages.json`
 2. ค้นหาคำศัพท์เกม (TH/EN/CN) จาก `dictionary.json`
 3. OCR แปลงรูปภาพเป็นข้อความ (ผ่าน ocr.space API) เมื่อมีคนกด reaction ✅ บนรูป
 4. เครื่องมือ mod: ลบข้อความของ user (`clear`, `nuke`)
-5. เล่นเพลงในห้องเสียง (`play`, `pause`, `stop`) — ดึงเสียงผ่าน `yt-dlp` + `ffmpeg`
 
 Repo: `https://github.com/chattyza/discord-bot`
 
@@ -22,11 +21,8 @@ Repo: `https://github.com/chattyza/discord-bot`
 | discord.py | >=2.3.0 (ติดตั้งจริง 2.7.1) |
 | python-dotenv | >=1.0.0 |
 | aiohttp | >=3.9.0 |
-| PyNaCl | >=1.5.0 — จำเป็นสำหรับต่อเสียง (voice) ของ discord.py |
-| davey | >=0.1.6 — จำเป็นสำหรับต่อเสียงของ discord.py 2.6+ (Discord's DAVE E2EE protocol) ไม่มีแล้วจะเจอ `RuntimeError: davey library needed in order to use voice` |
-| yt-dlp | >=2024.1.0 — ดึงเสียงจาก YouTube/แหล่งอื่นสำหรับฟีเจอร์เพลง |
-| ffmpeg | ต้องติดตั้งเองแยกจาก pip (ไม่ใช่ Python package) — ใช้แปลง/สตรีมเสียงตอนเล่นเพลง ดู "ติดตั้ง ffmpeg" ด้านล่าง |
 | Git | ใช้ push ข้อมูล JSON ที่อัปเดตขึ้น GitHub |
+| Hosting | Railway (service ชื่อ "worker", deploy อัตโนมัติจาก git push ผ่าน GitHub) |
 
 ## โครงสร้างไฟล์
 
@@ -35,7 +31,7 @@ Repo: `https://github.com/chattyza/discord-bot`
 - `stages.json` — ข้อมูลด่านทั้งหมด (โหลดจาก disk ตอนรันคำสั่ง `!w m`)
 - `dictionary.json` — ข้อมูลคำศัพท์ (โหลดจาก disk ตอนรันคำสั่ง `!w d`)
 - `.env` — เก็บ token/credentials (**ไม่ถูก commit เข้า git** — เช็คแล้วว่าไม่เคยอยู่ใน git history เลย ปลอดภัย)
-- `.gitignore` — กัน `.env`, `__pycache__/`, `*.pyc`
+- `.gitignore` — กัน `.env`, `__pycache__/`, `*.pyc`, ไฟล์ cookies ทุกชนิด (เผื่อไว้แม้ตอนนี้ไม่ได้ใช้ cookies แล้ว)
 - `Procfile` — `worker: python bot.py` (สำหรับ deploy แบบ Heroku-style worker dyno)
 - `run_bot.bat` — รันบอทบน Windows แบบดับเบิลคลิก
 - `update_json.bat` — สคริปต์อัปเดตข้อมูล (ดูหัวข้อ Workflow ด้านล่าง)
@@ -49,9 +45,6 @@ Repo: `https://github.com/chattyza/discord-bot`
 | `DISCORD_TOKEN` | Token ของบอทจาก Discord Developer Portal |
 | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | ข้อมูลเชื่อมต่อฐานข้อมูล (หมายเหตุ: ปัจจุบัน `bot.py` ยังไม่ได้ใช้ค่านี้จริง — เป็น credential ที่เตรียมไว้เผื่ออนาคต หรือใช้กับระบบอื่น เช่นเว็บ export ข้อมูล) |
 | `OCR_API_KEY` | API key ของ ocr.space สำหรับฟีเจอร์ OCR |
-| `FFMPEG_PATH` | *(ไม่บังคับ)* path เต็มไปยัง `ffmpeg.exe` — ใส่เฉพาะกรณี ffmpeg ไม่ได้อยู่ใน PATH ของระบบ ถ้าไม่ตั้งค่า บอทจะเรียก `ffmpeg` ตรงๆ (ต้องอยู่ใน PATH) |
-| `YT_COOKIES_B64` | *(ไม่บังคับ แต่จำเป็นถ้าเจอ error "Sign in to confirm you're not a bot")* เนื้อหาไฟล์ cookies.txt เข้ารหัส base64 เป็นบรรทัดเดียว — วิธีนี้แนะนำ เพราะวางใน Railway ไม่มีปัญหา whitespace/หลายบรรทัดพัง ดูวิธีทำในหัวข้อ "แก้ปัญหา YouTube bot detection" ด้านล่าง |
-| `YT_COOKIES` | *(ทางเลือกเก่า ไม่แนะนำ)* เนื้อหาไฟล์ cookies.txt แบบดิบ วางหลายบรรทัด เสี่ยง copy-paste ผิดรูปแบบ ใช้ `YT_COOKIES_B64` แทนถ้าเป็นไปได้ |
 
 > ⚠️ ค่าจริงของ `.env` เคยถูกพิมพ์ตรงๆ ในแชทนี้ ถ้า credential ชุดนี้เคยหลุดไปที่อื่น (เช่นเคย commit ไว้ก่อนหน้า, แชร์ใน public channel) แนะนำให้ rotate token/password ใหม่เพื่อความปลอดภัย
 
@@ -66,10 +59,6 @@ Repo: `https://github.com/chattyza/discord-bot`
 | กด ✅ บนรูปภาพ | OCR แปลงรูปเป็นข้อความ (ภาษาไทย, สูงสุด 3 รูปต่อครั้ง) |
 | `!w clear <user\|all> [n]` | ลบข้อความ (ต้องมีสิทธิ์ Manage Messages), default 100, สูงสุด 1000 |
 | `!w nuke <user>` | ลบข้อความของ user คนนั้นทุก channel (สแกน 500 ข้อความล่าสุดต่อ channel) |
-| `!w play <ชื่อเพลง\|URL>` | เล่นเพลง (ต้องอยู่ในห้องเสียงก่อน) ถ้ามีเพลงเล่นอยู่แล้วจะเข้าคิวต่อท้าย |
-| `!w pause` | toggle หยุดชั่วคราว/เล่นต่อ |
-| `!w stop` | หยุดเพลง, ล้างคิว, ออกจากห้องเสียง |
-| _(อัตโนมัติ)_ | บอทออกจากห้องเสียงเองถ้าทุกคนออกจากห้องหมด (เหลือบอทคนเดียว) |
 
 ## โครงสร้างข้อมูล
 
@@ -109,48 +98,26 @@ Repo: `https://github.com/chattyza/discord-bot`
 
 บอทโหลด JSON จาก disk ทุกครั้งที่มีคำสั่ง (ไม่ cache ในหน่วยความจำ) ดังนั้น push เสร็จแล้วต้อง **restart บอท** (หรือถ้า deploy บน host ที่ pull auto ก็ให้ pull ก่อน) ค่าใหม่ถึงจะมีผล
 
-## Setup เครื่องใหม่ (สรุปจากที่ทำไปแล้ว)
+## Setup เครื่องใหม่
 
-1. ติดตั้ง Python 3.x + pip + Git ✅ (มีอยู่แล้วบนเครื่องนี้: Python 3.14.6, Git 2.55.0)
-2. `pip install -r requirements.txt` ✅ (รวม PyNaCl, yt-dlp สำหรับฟีเจอร์เพลง)
+1. ติดตั้ง Python 3.x + pip + Git
+2. `pip install -r requirements.txt`
 3. สร้างไฟล์ `.env` ใส่ key ทั้งหมดด้านบนให้ครบ
-4. ติดตั้ง ffmpeg (ดูหัวข้อถัดไป) — ถ้าไม่ลง ฟีเจอร์เพลงจะใช้ไม่ได้ แต่คำสั่งอื่นยังทำงานปกติ
-5. รันบอทด้วย `run_bot.bat` หรือ `python bot.py`
+4. รันบอทด้วย `run_bot.bat` หรือ `python bot.py`
 
-## ติดตั้ง ffmpeg (จำเป็นสำหรับฟีเจอร์เพลง)
+## เคยลองทำ: ฟีเจอร์เพลง (play/pause/stop) — ทำไมถึงตัดทิ้ง
 
-ffmpeg ไม่ใช่ Python package เลยลงผ่าน `pip` ไม่ได้ ต้องดาวน์โหลด binary เอง:
+**อย่าลองเพิ่มฟีเจอร์นี้อีกโดยไม่อ่านหัวข้อนี้ก่อน** เคยพัฒนาเสร็จสมบูรณ์แล้ว (เชื่อมห้องเสียง, เล่นเพลงจาก YouTube ผ่าน `yt-dlp` + `ffmpeg`, คิวเพลง, auto-disconnect) แต่สุดท้ายต้องตัดทิ้งเพราะเจอข้อจำกัดที่แก้ไม่ได้ด้วยโค้ด:
 
-1. โหลดจาก https://www.gyan.dev/ffmpeg/builds/ (เลือก "release essentials")
-2. แตกไฟล์ zip แล้ว copy โฟลเดอร์ไปไว้ที่ไหนก็ได้ เช่น `C:\ffmpeg`
-3. เพิ่ม `C:\ffmpeg\bin` เข้า PATH ของ Windows (Environment Variables) แล้วเปิด terminal ใหม่ ทดสอบด้วย `ffmpeg -version`
-4. ถ้าไม่อยากยุ่งกับ PATH ระบบ ให้ตั้ง `FFMPEG_PATH=C:\ffmpeg\bin\ffmpeg.exe` ใน `.env` แทน — บอทจะเรียกใช้ path นี้ตรงๆ
+**สาเหตุที่แท้จริง: Railway ไม่รองรับ inbound UDP**
 
-## แก้ปัญหา YouTube bot detection ("Sign in to confirm you're not a bot")
+Discord voice ต้องการให้บอท**รับ** UDP packet ตอบกลับจาก Discord voice server (ใช้ตอน IP discovery ตอนเริ่มเชื่อมต่อห้องเสียง) แต่ Railway (ตรวจสอบจากเอกสารทางการแล้ว) รองรับแค่ inbound HTTP domain กับ TCP proxy เท่านั้น **ไม่มี inbound UDP** เลย ผลคือทุกครั้งที่บอทพยายามต่อห้องเสียง จะค้างที่ขั้นตอน "voice handshake" จนครบ 30 วินาทีแล้ว timeout เสมอ (`discord.voice_state: Timed out connecting to voice`) — เป็นข้อจำกัดระดับ infrastructure ของ Railway เอง แก้ด้วยโค้ดยังไงก็ไม่มีทาง ระหว่างทางก่อนเจอสาเหตุนี้ ยังเจอปัญหาอื่นซ้อนด้วย (แก้ไปตามลำดับได้หมดแล้ว แต่สุดท้ายก็มาติดที่ UDP):
 
-ตั้งแต่ต้นปี 2026 YouTube เข้มงวดเรื่องบล็อกการดึงข้อมูลแบบไม่ login มากขึ้นมาก ทุก client ของ yt-dlp (web, android, tv, ios) มักโดน `LOGIN_REQUIRED` เหมือนกันหมด โดยเฉพาะจาก IP ของ cloud/datacenter อย่าง Railway วิธีแก้ที่ยังได้ผลตอนนี้คือใช้ **cookies จากบัญชี YouTube ที่ login จริง** (บัญชีที่มี YouTube Premium จะน่าเชื่อถือกว่าบัญชีฟรีในสายตาระบบตรวจจับของ YouTube)
+- discord.py 2.6+ ต้องมี package `davey` เพิ่ม (Discord's DAVE E2EE protocol) ไม่งั้น error `RuntimeError: davey library needed in order to use voice`
+- YouTube บล็อกการดึงเสียงแบบไม่ login (`LOGIN_REQUIRED` / "Sign in to confirm you're not a bot") ต้องใช้ cookies จากบัญชีจริง — แต่ cookies จาก IP ของ cloud/datacenter อย่าง Railway หมดอายุไวมาก (เจอเคสหมดอายุใน ~30 นาที) เพราะ YouTube สงสัยว่า session ผิดปกติ
+- ต่อให้ cookies ผ่าน ก็ยังเจอ YouTube's SABR streaming ที่ซ่อน format เสียงถ้าไม่มี PO token (ต้องเลี่ยงด้วย `extractor_args`)
 
-**ขั้นตอน:**
-
-1. เปิด Chrome/Edge (ใช้ browser ปกติ ไม่ใช่ incognito) แล้ว login เข้าบัญชี YouTube ที่จะใช้
-2. ติดตั้ง extension "Get cookies.txt LOCALLY" (หรือชื่อใกล้เคียง) จาก Chrome Web Store
-3. เข้า youtube.com แล้วกด export cookies ผ่าน extension จะได้ไฟล์ `cookies.txt`
-4. **ในเครื่อง (dev):** copy ไฟล์ไปวางที่ `D:\Discord_Bot\cookies.txt` ตรงๆ (มีอยู่ใน `.gitignore` แล้ว จะไม่ถูก commit ขึ้น GitHub เด็ดขาด)
-5. **บน Railway (แนะนำ — วิธี base64):** เพื่อเลี่ยงปัญหา whitespace/multi-line พังตอนวางในกล่อง Railway ให้แปลงไฟล์เป็น base64 บรรทัดเดียวก่อน:
-   - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("D:\Discord_Bot\cookies.txt")) | Set-Clipboard` (ผลลัพธ์จะถูก copy ไปไว้ใน clipboard ให้เลย)
-   - หรือ Git Bash: `base64 -w0 cookies.txt | clip`
-   - สร้าง Variable ใหม่ชื่อ `YT_COOKIES_B64` ใน Railway วางค่าที่ copy มา (บรรทัดเดียว ไม่มีช่องว่างหน้า-หลังชื่อ variable ให้เช็คก่อนกด Add)
-   - ถ้าเคยสร้าง `YT_COOKIES` แบบเก่าไว้ (ที่มีปัญหา whitespace) ลบทิ้งได้เลย ไม่ใช้แล้ว
-
-**ข้อควรระวัง:**
-
-- cookies.txt เทียบเท่ารหัสผ่านของบัญชีนั้น ห้าม commit เข้า git หรือแชร์ให้ใครเด็ดขาด
-- cookies จะหมดอายุเป็นระยะ (สัปดาห์ถึงเดือน) ถ้าบอทเริ่ม error `Sign in to confirm` อีก ให้ export ใหม่แล้วอัปเดตค่าใน `YT_COOKIES`
-- การใช้ cookies บัญชีจริงแบบอัตโนมัติแบบนี้ไม่ตรงกับ YouTube ToS เสี่ยงเล็กน้อยที่บัญชีจะถูกจำกัด แม้จะเป็นบัญชี Premium ก็ตาม แนะนำใช้บัญชีสำรอง ไม่ใช่บัญชีหลักที่ใช้ประจำ ถ้ากังวลเรื่องนี้
-
-## Hosting note: ผลกระทบต่อ Railway (usage-based billing)
-
-ฟีเจอร์เพลงเพิ่มการใช้ **network egress** (สตรีมเสียงออกไปตอนเล่น) เป็นตัวที่กระทบบิลชัดสุด ราวๆ 45–60MB/ชม. ของการเล่นเพลง ส่วน CPU/RAM เพิ่มขึ้นเฉพาะตอนมีเพลงเล่นอยู่ (ffmpeg transcode) ไม่ใช่ตลอดเวลาเหมือนโปรเซสหลัก ถ้าใช้งานเปิดเพลงไม่ต่อเนื่องทั้งวัน ผลกระทบต่อ credit ที่มีอยู่ใน plan จะไม่มาก
+**ถ้าจะกลับมาทำฟีเจอร์นี้อีกในอนาคต** ต้องย้าย hosting ไปที่รองรับ UDP แบบสองทาง (เช่น VPS จริงที่มี public IP ตรงๆ อย่าง DigitalOcean, Oracle Cloud, หรือเครื่อง/เซิร์ฟเวอร์ส่วนตัว) ไม่ใช่แค่แก้โค้ดฝั่งบอท — Railway ใช้ต่อได้ปกติสำหรับฟีเจอร์อื่นทั้งหมดที่ไม่ใช้เสียง (m, d, OCR, clear, nuke)
 
 ## Deploy
 
