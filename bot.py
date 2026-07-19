@@ -17,6 +17,16 @@ FFMPEG_EXECUTABLE = os.getenv("FFMPEG_PATH", "ffmpeg")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- Music ---
+# YouTube บล็อกการดึงเสียงแบบไม่ login มากขึ้นเรื่อยๆ (LOGIN_REQUIRED / "Sign in to confirm you're not a bot")
+# แก้โดยใช้ cookies จากบัญชี YouTube จริง (แนะนำบัญชีที่มี YouTube Premium เพราะเชื่อถือได้กว่า)
+# วิธีตั้งค่า: ดู project_bible.md หัวข้อ "แก้ปัญหา YouTube bot detection"
+COOKIES_PATH = os.path.join(BASE_DIR, "cookies.txt")
+_cookies_env = os.getenv("YT_COOKIES")
+if _cookies_env and not os.path.exists(COOKIES_PATH):
+    # รองรับกรณีตั้งค่าผ่าน env var (เช่นบน Railway ที่ไม่มีไฟล์ cookies.txt ติดมากับ deploy)
+    with open(COOKIES_PATH, "w", encoding="utf-8") as f:
+        f.write(_cookies_env)
+
 YTDL_OPTIONS = {
     "format": "bestaudio/best",
     "noplaylist": True,
@@ -24,6 +34,9 @@ YTDL_OPTIONS = {
     "default_search": "ytsearch",
     "source_address": "0.0.0.0",
 }
+if os.path.exists(COOKIES_PATH):
+    YTDL_OPTIONS["cookiefile"] = COOKIES_PATH
+
 FFMPEG_OPTIONS = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn",
