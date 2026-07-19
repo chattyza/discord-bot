@@ -23,6 +23,7 @@ Repo: `https://github.com/chattyza/discord-bot`
 | python-dotenv | >=1.0.0 |
 | aiohttp | >=3.9.0 |
 | PyNaCl | >=1.5.0 — จำเป็นสำหรับต่อเสียง (voice) ของ discord.py |
+| davey | >=0.1.6 — จำเป็นสำหรับต่อเสียงของ discord.py 2.6+ (Discord's DAVE E2EE protocol) ไม่มีแล้วจะเจอ `RuntimeError: davey library needed in order to use voice` |
 | yt-dlp | >=2024.1.0 — ดึงเสียงจาก YouTube/แหล่งอื่นสำหรับฟีเจอร์เพลง |
 | ffmpeg | ต้องติดตั้งเองแยกจาก pip (ไม่ใช่ Python package) — ใช้แปลง/สตรีมเสียงตอนเล่นเพลง ดู "ติดตั้ง ffmpeg" ด้านล่าง |
 | Git | ใช้ push ข้อมูล JSON ที่อัปเดตขึ้น GitHub |
