@@ -2,14 +2,79 @@ import discord
 from discord.ext import commands
 import os
 import json
+import asyncio
+import functools
+from collections import deque
 import aiohttp
+import yt_dlp
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
+FFMPEG_EXECUTABLE = os.getenv("FFMPEG_PATH", "ffmpeg")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# --- Music ---
+YTDL_OPTIONS = {
+    "format": "bestaudio/best",
+    "noplaylist": True,
+    "quiet": True,
+    "default_search": "ytsearch",
+    "source_address": "0.0.0.0",
+}
+FFMPEG_OPTIONS = {
+    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+    "options": "-vn",
+}
+
+ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
+
+music_queues: dict[int, deque] = {}   # guild_id -> deque ของเพลงที่รอเล่น
+
+
+def get_queue(guild_id: int) -> deque:
+    return music_queues.setdefault(guild_id, deque())
+
+
+async def extract_track(query: str) -> dict:
+    """ค้นหา/แปลง query (ชื่อเพลงหรือ URL) เป็นข้อมูลเพลงที่เล่นได้ (รันแบบ blocking ใน executor)"""
+    loop = asyncio.get_event_loop()
+    partial = functools.partial(ytdl.extract_info, query, download=False)
+    data = await loop.run_in_executor(None, partial)
+    if "entries" in data:
+        if not data["entries"]:
+            raise ValueError("ไม่พบผลลัพธ์")
+        data = data["entries"][0]
+    return {
+        "title": data.get("title", "ไม่ทราบชื่อเพลง"),
+        "url": data["url"],
+        "webpage_url": data.get("webpage_url", query),
+    }
+
+
+async def play_next(ctx: commands.Context):
+    guild_id = ctx.guild.id
+    queue = get_queue(guild_id)
+    voice_client = ctx.voice_client
+    if not queue or voice_client is None:
+        return
+
+    track = queue.popleft()
+    source = discord.FFmpegPCMAudio(track["url"], executable=FFMPEG_EXECUTABLE, **FFMPEG_OPTIONS)
+
+    def _after(error: Exception | None):
+        if error:
+            print(f"⚠️ Player error: {error}")
+        fut = asyncio.run_coroutine_threadsafe(play_next(ctx), ctx.bot.loop)
+        try:
+            fut.result()
+        except Exception as e:
+            print(f"⚠️ play_next error: {e}")
+
+    voice_client.play(source, after=_after)
+    await ctx.send(f"🎶 กำลังเล่น: **{track['title']}**")
 
 def load_json(filename: str) -> list | dict | None:
     """อ่านไฟล์ JSON จาก disk"""
@@ -62,6 +127,15 @@ def help_embed() -> discord.Embed:
     embed.add_field(
         name="🖼️ OCR",
         value="กด ✅ ที่รูปภาพ — แปลงรูปเป็น text",
+        inline=False,
+    )
+    embed.add_field(
+        name="🎵 เพลง",
+        value=(
+            "`!w play <ชื่อเพลง/URL>` — เล่นเพลง (ต้องอยู่ในห้องเสียงก่อน)\n"
+            "`!w pause` — หยุด/เล่นต่อ (toggle)\n"
+            "`!w stop` — หยุดและออกจากห้องเสียง"
+        ),
         inline=False,
     )
     embed.add_field(
@@ -302,6 +376,78 @@ async def howto(ctx: commands.Context):
     embed.add_field(name="💳 Topup", value="https://chatty.site.je/topup.php", inline=False)
     embed.add_field(name="🆔 CN ID", value="https://shorturl.at/zO1Yu", inline=False)
     await ctx.send(embed=embed)
+
+
+@bot.command(name="play")
+async def play(ctx: commands.Context, *, query: str):
+    """
+    เล่นเพลง — !w play <ชื่อเพลง หรือ URL YouTube>
+
+    ถ้ามีเพลงเล่นอยู่แล้ว จะเพิ่มเข้าคิวแทน
+    """
+    if ctx.author.voice is None or ctx.author.voice.channel is None:
+        await ctx.send("⚠️ ต้องเข้าห้องเสียงก่อนถึงจะใช้คำสั่งนี้ได้", delete_after=8)
+        return
+
+    voice_channel = ctx.author.voice.channel
+    voice_client = ctx.voice_client
+    if voice_client is None:
+        voice_client = await voice_channel.connect()
+    elif voice_client.channel != voice_channel:
+        await voice_client.move_to(voice_channel)
+
+    async with ctx.typing():
+        try:
+            track = await extract_track(query)
+        except Exception as e:
+            await ctx.send(f"❌ หาเพลงไม่เจอ: `{e}`", delete_after=10)
+            return
+
+    get_queue(ctx.guild.id).append(track)
+
+    if voice_client.is_playing() or voice_client.is_paused():
+        await ctx.send(f"➕ เพิ่มเข้าคิว: **{track['title']}**")
+    else:
+        await play_next(ctx)
+
+
+@play.error
+async def play_error(ctx: commands.Context, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("⚠️ ระบุชื่อเพลงหรือ URL ด้วย เช่น `!w play imagine dragons believer`", delete_after=8)
+    else:
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
+        raise error
+
+
+@bot.command(name="pause")
+async def pause(ctx: commands.Context):
+    """หยุดเพลงชั่วคราว / เล่นต่อ — !w pause (toggle)"""
+    voice_client = ctx.voice_client
+    if voice_client is None or not (voice_client.is_playing() or voice_client.is_paused()):
+        await ctx.send("⚠️ ไม่มีเพลงกำลังเล่นอยู่", delete_after=5)
+        return
+
+    if voice_client.is_playing():
+        voice_client.pause()
+        await ctx.send("⏸️ หยุดเพลงชั่วคราวแล้ว (พิมพ์ `!w pause` อีกครั้งเพื่อเล่นต่อ)")
+    else:
+        voice_client.resume()
+        await ctx.send("▶️ เล่นเพลงต่อ")
+
+
+@bot.command(name="stop")
+async def stop(ctx: commands.Context):
+    """หยุดเพลงและออกจากห้องเสียง — !w stop"""
+    voice_client = ctx.voice_client
+    if voice_client is None:
+        await ctx.send("⚠️ บอทไม่ได้อยู่ในห้องเสียง", delete_after=5)
+        return
+
+    get_queue(ctx.guild.id).clear()
+    voice_client.stop()
+    await voice_client.disconnect()
+    await ctx.send("⏹️ หยุดเพลงและออกจากห้องเสียงแล้ว")
 
 
 @map_search.error
