@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import os
 import json
+import base64
 import asyncio
 import functools
 from collections import deque
@@ -21,11 +22,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # แก้โดยใช้ cookies จากบัญชี YouTube จริง (แนะนำบัญชีที่มี YouTube Premium เพราะเชื่อถือได้กว่า)
 # วิธีตั้งค่า: ดู project_bible.md หัวข้อ "แก้ปัญหา YouTube bot detection"
 COOKIES_PATH = os.path.join(BASE_DIR, "cookies.txt")
-_cookies_env = os.getenv("YT_COOKIES")
-if _cookies_env and not os.path.exists(COOKIES_PATH):
-    # รองรับกรณีตั้งค่าผ่าน env var (เช่นบน Railway ที่ไม่มีไฟล์ cookies.txt ติดมากับ deploy)
-    with open(COOKIES_PATH, "w", encoding="utf-8") as f:
-        f.write(_cookies_env)
+_cookies_b64 = os.getenv("YT_COOKIES_B64")  # แนะนำ: ค่าเดียวบรรทัดเดียว วางใน Railway ไม่มีพัง
+_cookies_raw = os.getenv("YT_COOKIES")      # เผื่อไว้ (แบบเก่า วางหลายบรรทัด เสี่ยง copy-paste ผิด)
+if not os.path.exists(COOKIES_PATH):
+    if _cookies_b64:
+        with open(COOKIES_PATH, "wb") as f:
+            f.write(base64.b64decode(_cookies_b64))
+    elif _cookies_raw:
+        with open(COOKIES_PATH, "w", encoding="utf-8") as f:
+            f.write(_cookies_raw)
 
 YTDL_OPTIONS = {
     "format": "bestaudio/best",
