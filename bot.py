@@ -32,6 +32,12 @@ if not os.path.exists(COOKIES_PATH):
         with open(COOKIES_PATH, "w", encoding="utf-8") as f:
             f.write(_cookies_raw)
 
+# Debug log: ไม่พิมพ์เนื้อหาไฟล์ (secret) แค่ยืนยันว่าโหลดสำเร็จ/ขนาดไฟล์ ดูได้ใน Railway > Deployments > logs
+if os.path.exists(COOKIES_PATH):
+    print(f"✅ cookies.txt พร้อมใช้งาน ({os.path.getsize(COOKIES_PATH)} bytes) source={'YT_COOKIES_B64' if _cookies_b64 else ('YT_COOKIES' if _cookies_raw else 'local file')}")
+else:
+    print("⚠️ ไม่พบ cookies.txt และไม่มี YT_COOKIES_B64/YT_COOKIES — คำสั่งเพลงจากยูทูปน่าจะโดนบล็อก")
+
 YTDL_OPTIONS = {
     "format": "bestaudio/best",
     "noplaylist": True,
