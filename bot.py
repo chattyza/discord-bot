@@ -44,6 +44,9 @@ YTDL_OPTIONS = {
     "quiet": True,
     "default_search": "ytsearch",
     "source_address": "0.0.0.0",
+    # YouTube เปลี่ยนไปใช้ SABR streaming ทำให้บาง format โดนซ่อนถ้าไม่มี PO token
+    # "missing_pot" สั่งให้ yt-dlp ยอมใช้ format พวกนี้แทนที่จะเมิน (อาจมีบางคลิปเล่นสะดุด/โหลดช้ากว่าปกติ)
+    "extractor_args": {"youtube": {"formats": ["missing_pot"]}},
 }
 if os.path.exists(COOKIES_PATH):
     YTDL_OPTIONS["cookiefile"] = COOKIES_PATH
