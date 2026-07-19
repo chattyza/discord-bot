@@ -134,7 +134,8 @@ def help_embed() -> discord.Embed:
         value=(
             "`!w play <ชื่อเพลง/URL>` — เล่นเพลง (ต้องอยู่ในห้องเสียงก่อน)\n"
             "`!w pause` — หยุด/เล่นต่อ (toggle)\n"
-            "`!w stop` — หยุดและออกจากห้องเสียง"
+            "`!w stop` — หยุดและออกจากห้องเสียง\n"
+            "_(บอทจะออกจากห้องเองถ้าทุกคนออกหมด)_"
         ),
         inline=False,
     )
@@ -448,6 +449,25 @@ async def stop(ctx: commands.Context):
     voice_client.stop()
     await voice_client.disconnect()
     await ctx.send("⏹️ หยุดเพลงและออกจากห้องเสียงแล้ว")
+
+
+@bot.event
+async def on_voice_state_update(
+    member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
+):
+    """ออกจากห้องเสียงอัตโนมัติ ถ้าเหลือบอทอยู่คนเดียว (ทุกคนออกหมด)"""
+    if before.channel is None:
+        return  # สนใจเฉพาะตอนมีคน "ออกจาก"/"ย้ายออกจาก" ห้อง
+
+    guild = before.channel.guild
+    voice_client = guild.voice_client
+    if voice_client is None or voice_client.channel != before.channel:
+        return  # บอทไม่ได้อยู่ในห้องที่มีคนออก
+
+    humans_left = [m for m in before.channel.members if not m.bot]
+    if not humans_left:
+        get_queue(guild.id).clear()
+        await voice_client.disconnect()
 
 
 @map_search.error
