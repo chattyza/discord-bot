@@ -4,13 +4,14 @@
 
 ## ภาพรวม
 
-Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 5 อย่าง:
+Discord bot (Python, `discord.py`) สำหรับช่วยเหลือผู้เล่นเกม **Blackfire** ในเซิร์ฟเวอร์ Discord ทำหน้าที่หลัก 6 อย่าง:
 
 1. ค้นหาชื่อด่าน (TH/EN/CN) จาก `stages.json`
 2. ค้นหาคำศัพท์เกม (TH/EN/CN) จาก `dictionary.json`
 3. OCR แปลงรูปภาพเป็นข้อความ (ผ่าน ocr.space API) เมื่อมีคนกด reaction ✅ บนรูป
 4. ค้นหารูปภาพด้วย Google Lens เมื่อมีคนกด reaction 🖕 บนรูป
-5. เครื่องมือ mod: ลบข้อความของ user (`clear`, `nuke`)
+5. แปลภาษา EN/TH/CN แบบปกติ (ฟรี) หรือแบบ advance (Gemini, เป็นธรรมชาติกว่า)
+6. เครื่องมือ mod: ลบข้อความของ user (`clear`, `nuke`)
 
 Repo: `https://github.com/chattyza/discord-bot`
 
@@ -22,6 +23,8 @@ Repo: `https://github.com/chattyza/discord-bot`
 | discord.py | >=2.3.0 (ติดตั้งจริง 2.7.1) |
 | python-dotenv | >=1.0.0 |
 | aiohttp | >=3.9.0 |
+| deep-translator | >=1.11.4 — แปลภาษาแบบปกติ (ฟรี, wrap Google Translate แบบ unofficial ไม่ต้องมี API key) |
+| google-genai | >=1.0.0 — แปลภาษาแบบ advance ผ่าน Gemini (ต้องมี `GEMINI_API_KEY`) |
 | Git | ใช้ push ข้อมูล JSON ที่อัปเดตขึ้น GitHub |
 | Hosting | Railway (service ชื่อ "worker", deploy อัตโนมัติจาก git push ผ่าน GitHub) |
 
@@ -46,6 +49,7 @@ Repo: `https://github.com/chattyza/discord-bot`
 | `DISCORD_TOKEN` | Token ของบอทจาก Discord Developer Portal |
 | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | ข้อมูลเชื่อมต่อฐานข้อมูล (หมายเหตุ: ปัจจุบัน `bot.py` ยังไม่ได้ใช้ค่านี้จริง — เป็น credential ที่เตรียมไว้เผื่ออนาคต หรือใช้กับระบบอื่น เช่นเว็บ export ข้อมูล) |
 | `OCR_API_KEY` | API key ของ ocr.space สำหรับฟีเจอร์ OCR |
+| `GEMINI_API_KEY` | *(ไม่บังคับ)* API key จาก Google AI Studio — จำเป็นเฉพาะคำสั่งแปลแบบ advance (`!w en-th!` ฯลฯ) ถ้าไม่ตั้งค่า คำสั่งแบบ advance จะตอบ error แต่คำสั่งแปลแบบปกติ (ไม่มี `!`) ยังใช้ได้ปกติ ฟรี ไม่ต้องผูกบัตร ดูวิธีขอที่ Google AI Studio (ai.google.dev) |
 
 > ⚠️ ค่าจริงของ `.env` เคยถูกพิมพ์ตรงๆ ในแชทนี้ ถ้า credential ชุดนี้เคยหลุดไปที่อื่น (เช่นเคย commit ไว้ก่อนหน้า, แชร์ใน public channel) แนะนำให้ rotate token/password ใหม่เพื่อความปลอดภัย
 
@@ -59,6 +63,12 @@ Repo: `https://github.com/chattyza/discord-bot`
 | `!w howto` | ลิงก์สมัคร/เติมเงิน/CN ID |
 | กด ✅ บนรูปภาพ | OCR แปลงรูปเป็นข้อความ (ภาษาไทย, สูงสุด 3 รูปต่อครั้ง) |
 | กด 🖕 บนรูปภาพ | ส่งลิงก์ค้นหารูปนั้นด้วย Google Lens (reverse image search, สูงสุด 3 รูปต่อครั้ง) |
+| `!w en-th <ข้อความ>` | แปล EN→TH แบบปกติ (ฟรี, Google Translate) |
+| `!w th-en <ข้อความ>` | แปล TH→EN แบบปกติ |
+| `!w th-cn <ข้อความ>` | แปล TH→CN แบบปกติ |
+| `!w en-th! <ข้อความ>` | แปล EN→TH แบบ advance (Gemini, เป็นธรรมชาติกว่า, ต้องมี `GEMINI_API_KEY`) |
+| `!w th-en! <ข้อความ>` | แปล TH→EN แบบ advance |
+| `!w th-cn! <ข้อความ>` | แปล TH→CN แบบ advance |
 | `!w clear <user\|all> [n]` | ลบข้อความ (ต้องมีสิทธิ์ Manage Messages), default 100, สูงสุด 1000 |
 | `!w nuke <user>` | ลบข้อความของ user คนนั้นทุก channel (สแกน 500 ข้อความล่าสุดต่อ channel) |
 
@@ -105,6 +115,15 @@ Repo: `https://github.com/chattyza/discord-bot`
 กด reaction 🖕 บนข้อความที่มีรูปภาพ (ไฟล์แนบ หรือรูปใน embed/link preview) บอทจะตอบกลับเป็นลิงก์ `https://lens.google.com/uploadbyurl?url=<image_url>` ให้กดเข้าไปดูผลค้นหาบน Google Lens ได้เลย
 
 ทำงานแบบนี้เพราะ Google ไม่มี Lens API สาธารณะให้ใช้ตรงๆ (มีแต่บริการ third-party อย่าง SerpApi ที่คิดเงิน) แต่ endpoint `uploadbyurl` เป็นลิงก์เดียวกับที่ browser ใช้ตอนกด "Search image with Google Lens" อยู่แล้ว บอทแค่สร้างลิงก์นี้ให้ ไม่ได้ scrape หรือประมวลผลอะไรเอง จึงไม่มีค่าใช้จ่าย ไม่มี API key ต้องตั้งค่า และไม่เสี่ยงโดน rate limit/บล็อกแบบที่เจอกับ YouTube
+
+## ฟีเจอร์แปลภาษา
+
+คำสั่งแปลภาษา (`en-th`, `th-en`, `th-cn` และ version `!` ต่อท้าย) **ไม่ได้ผูกกับระบบ command ปกติของ discord.py** (ไม่ใช้ `@bot.command`) แต่ดักจับด้วย regex ใน `on_message` แทน เพราะชื่อคำสั่งมีเครื่องหมาย `!` ต่อท้ายได้ ซึ่งไม่ใช่ชื่อ command ที่ถูกต้องตามกติกาของ discord.py
+
+- **แบบปกติ** ใช้ `deep-translator` (wrap Google Translate แบบ unofficial) ฟรี ไม่ต้องมี API key แต่แปลตรงตัว อาจแข็งกับสำนวน/คำแสลง
+- **แบบ advance** ใช้ Gemini (`gemini-3.5-flash` ผ่าน `google-genai` SDK) ให้ prompt สั่งให้แปลแบบเป็นธรรมชาติ ไม่ใส่คำอธิบายเพิ่ม ต้องมี `GEMINI_API_KEY` ถ้าไม่ตั้งค่าไว้ คำสั่งจะตอบ error กลับมาเฉยๆ (ไม่กระทบคำสั่งแบบปกติ)
+
+**ข้อควรระวังเรื่อง Gemini free tier:** ฟรี ไม่ต้องผูกบัตร แต่ถ้าวันไหน enable billing บน Google Cloud project เดียวกัน (เช่นอยากอัปเกรดไปใช้โมเดล Pro) ฟรีเทียร์จะหายไปทั้ง project ทันที ทุก request จะเริ่มเก็บเงินตั้งแต่ตัวแรก — ถ้าจะทดลองฟีเจอร์อื่นที่ต้องเสียเงินบน Google Cloud แนะนำสร้าง project แยกจากตัวที่ใช้กับ Gemini API key นี้
 
 ## Setup เครื่องใหม่
 

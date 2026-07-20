@@ -1,16 +1,96 @@
 import discord
 from discord.ext import commands
 import os
+import re
 import json
+import asyncio
+import functools
 import urllib.parse
 import aiohttp
 from dotenv import load_dotenv
+from deep_translator import GoogleTranslator
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# --- Translate ---
+# !w en-th / th-en / th-cn <ข้อความ>  = แปลปกติ (ฟรี ผ่าน Google Translate)
+# !w en-th! / th-en! / th-cn! <ข้อความ>  = แปลแบบ advance (ผ่าน Gemini, เป็นธรรมชาติกว่า, ต้องตั้งค่า GEMINI_API_KEY)
+gemini_client = None
+if GEMINI_API_KEY:
+    from google import genai
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+
+TRANSLATE_LANGS = {
+    "en": {"code": "en", "name": "อังกฤษ", "flag": "🇬🇧"},
+    "th": {"code": "th", "name": "ไทย", "flag": "🇹🇭"},
+    "cn": {"code": "zh-CN", "name": "จีน", "flag": "🇨🇳"},
+}
+
+TRANSLATE_CMD_RE = re.compile(
+    r"^!w\s+(en-th|th-en|th-cn)(!)?\s+(.+)$", re.IGNORECASE | re.DOTALL
+)
+
+
+async def translate_basic(text: str, src_code: str, dst_code: str) -> str:
+    """แปลแบบปกติ ฟรี ไม่ต้องมี API key (ผ่าน Google Translate แบบ unofficial)"""
+    loop = asyncio.get_event_loop()
+    fn = functools.partial(GoogleTranslator(source=src_code, target=dst_code).translate, text)
+    return await loop.run_in_executor(None, fn)
+
+
+async def translate_advanced(text: str, src_name: str, dst_name: str) -> str:
+    """แปลแบบ advance ผ่าน Gemini ให้ได้ภาษาที่เป็นธรรมชาติกว่า"""
+    if gemini_client is None:
+        raise RuntimeError("ยังไม่ได้ตั้งค่า GEMINI_API_KEY บน server")
+
+    prompt = (
+        f"แปลข้อความต่อไปนี้จากภาษา{src_name}เป็นภาษา{dst_name} "
+        "ให้เป็นธรรมชาติเหมือนเจ้าของภาษาพูดจริง ไม่แปลตรงตัวแบบแข็งๆ "
+        "ตอบกลับมาแค่คำแปลอย่างเดียว ห้ามใส่คำอธิบาย ห้ามใส่เครื่องหมายคำพูดครอบ:\n\n"
+        f"{text}"
+    )
+    loop = asyncio.get_event_loop()
+    fn = functools.partial(
+        gemini_client.models.generate_content,
+        model="gemini-3.5-flash",
+        contents=prompt,
+    )
+    response = await loop.run_in_executor(None, fn)
+    return (response.text or "").strip()
+
+
+async def handle_translate_command(message: discord.Message, pair: str, advanced: bool, text: str) -> None:
+    src_key, dst_key = pair.lower().split("-")
+    src = TRANSLATE_LANGS[src_key]
+    dst = TRANSLATE_LANGS[dst_key]
+    text = text.strip()
+    if not text:
+        cmd = pair + ("!" if advanced else "")
+        await message.channel.send(f"⚠️ ใส่ข้อความที่จะแปลด้วย เช่น `!w {cmd} hello`", delete_after=8)
+        return
+
+    async with message.channel.typing():
+        try:
+            if advanced:
+                result = await translate_advanced(text, src["name"], dst["name"])
+            else:
+                result = await translate_basic(text, src["code"], dst["code"])
+        except Exception as e:
+            await message.channel.send(f"❌ แปลไม่สำเร็จ: `{e}`", delete_after=10)
+            return
+
+    title = f"{src['flag']} {src['name']} → {dst['flag']} {dst['name']}"
+    if advanced:
+        title += " ✨ Advance"
+    embed = discord.Embed(title=title, color=0x9B59B6 if advanced else 0x5865F2)
+    embed.add_field(name="ต้นฉบับ", value=text[:1000], inline=False)
+    embed.add_field(name="คำแปล", value=(result[:1000] if result else "-"), inline=False)
+    await message.channel.send(embed=embed)
 
 
 def load_json(filename: str) -> list | dict | None:
@@ -72,6 +152,14 @@ def help_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
+        name="🌐 แปลภาษา",
+        value=(
+            "`!w en-th <ข้อความ>` / `!w th-en <ข้อความ>` / `!w th-cn <ข้อความ>` — แปลปกติ (ฟรี)\n"
+            "เติม `!` ต่อท้ายคำสั่ง (เช่น `!w en-th! hello`) — แปลแบบ advance ผ่าน Gemini เป็นธรรมชาติกว่า"
+        ),
+        inline=False,
+    )
+    embed.add_field(
         name="🗑️ ลบข้อความ (mod)",
         value=(
             "`!w clear <user> [n]` — ลบข้อความของ user ในช่องนี้\n"
@@ -91,6 +179,13 @@ async def on_message(message: discord.Message):
     if message.content.strip() == "!w":
         await message.channel.send(embed=help_embed())
         return
+
+    m = TRANSLATE_CMD_RE.match(message.content.strip())
+    if m:
+        pair, bang, text = m.group(1), m.group(2), m.group(3)
+        await handle_translate_command(message, pair, bool(bang), text)
+        return
+
     await bot.process_commands(message)
 
 
