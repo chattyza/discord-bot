@@ -2,7 +2,9 @@ import discord
 from discord.ext import commands
 import os
 import re
+import ast
 import json
+import operator
 import asyncio
 import functools
 import urllib.parse
@@ -93,6 +95,82 @@ async def handle_translate_command(message: discord.Message, pair: str, advanced
     await message.channel.send(embed=embed)
 
 
+# --- Calculator ---
+class CalcError(Exception):
+    """ข้อผิดพลาดที่คาดไว้ตอนคำนวณ (ข้อความ error จะโชว์ให้ user เห็นได้ตรงๆ)"""
+
+
+_CALC_BIN_OPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+_CALC_UNARY_OPS = {
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+}
+
+
+def _calc_eval_node(node):
+    """ประเมินค่า AST node แบบจำกัดชนิด (ไม่ใช้ eval()/exec() ตรงๆ เพื่อกัน code injection)"""
+    if isinstance(node, ast.Expression):
+        return _calc_eval_node(node.body)
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            return node.value
+        raise CalcError("ค่าที่ไม่รองรับ")
+    if isinstance(node, ast.BinOp):
+        op_type = type(node.op)
+        if op_type not in _CALC_BIN_OPS:
+            raise CalcError("ตัวดำเนินการที่ไม่รองรับ")
+        left = _calc_eval_node(node.left)
+        right = _calc_eval_node(node.right)
+        if op_type is ast.Pow and (abs(right) > 20 or abs(left) > 1_000_000):
+            raise CalcError("เลขยกกำลังใหญ่เกินไป")
+        if op_type in (ast.Div, ast.FloorDiv, ast.Mod) and right == 0:
+            raise CalcError("หารด้วยศูนย์ไม่ได้")
+        return _CALC_BIN_OPS[op_type](left, right)
+    if isinstance(node, ast.UnaryOp):
+        op_type = type(node.op)
+        if op_type not in _CALC_UNARY_OPS:
+            raise CalcError("ตัวดำเนินการที่ไม่รองรับ")
+        return _CALC_UNARY_OPS[op_type](_calc_eval_node(node.operand))
+    raise CalcError("รูปแบบสมการไม่ถูกต้อง")
+
+
+def calculate(expr: str) -> int | float:
+    """คำนวณสมการคณิตศาสตร์แบบปลอดภัย รองรับ + - x(หรือ *) / ^ วงเล็บ"""
+    if len(expr) > 200:
+        raise CalcError("สมการยาวเกินไป (จำกัด 200 ตัวอักษร)")
+    normalized = (
+        expr.replace("x", "*")
+        .replace("X", "*")
+        .replace("×", "*")
+        .replace("÷", "/")
+        .replace("^", "**")
+        .replace(",", "")
+    )
+    if not re.fullmatch(r"[0-9.\+\-\*/()%\s]+", normalized):
+        raise CalcError("มีอักขระที่ไม่รองรับในสมการ (รองรับแค่ตัวเลข + - x / ^ วงเล็บ)")
+    try:
+        tree = ast.parse(normalized, mode="eval")
+    except SyntaxError:
+        raise CalcError("รูปแบบสมการไม่ถูกต้อง")
+    return _calc_eval_node(tree)
+
+
+def format_calc_result(result: int | float) -> str:
+    if isinstance(result, float):
+        if result.is_integer():
+            return str(int(result))
+        return str(round(result, 10)).rstrip("0").rstrip(".")
+    return str(result)
+
+
 def load_json(filename: str) -> list | dict | None:
     """อ่านไฟล์ JSON จาก disk"""
     path = os.path.join(BASE_DIR, filename)
@@ -149,6 +227,11 @@ def help_embed() -> discord.Embed:
     embed.add_field(
         name="🔍 ค้นหารูปภาพ",
         value="กด 🖕 ที่รูปภาพ — ส่งลิงก์ค้นหารูปนั้นด้วย Google Lens",
+        inline=False,
+    )
+    embed.add_field(
+        name="🧮 คำนวณ",
+        value="`!w cal <สมการ>` — คำนวณ +, -, x, /, ^, วงเล็บ เช่น `!w cal ((3+5) x (4-2) / 2) x (2 + 5)`",
         inline=False,
     )
     embed.add_field(
@@ -404,6 +487,35 @@ async def howto(ctx: commands.Context):
     embed.add_field(name="💳 Topup", value="https://chatty.site.je/topup.php", inline=False)
     embed.add_field(name="🆔 CN ID", value="https://shorturl.at/zO1Yu", inline=False)
     await ctx.send(embed=embed)
+
+
+@bot.command(name="cal")
+async def calc_cmd(ctx: commands.Context, *, expression: str):
+    """
+    คำนวณสมการคณิตศาสตร์ — !w cal <สมการ>
+
+    รองรับ + - x (หรือ *) / ^ วงเล็บ เช่น:
+        !w cal ((3+5) x (4-2) / 2) x (2 + 5)
+    """
+    try:
+        result = calculate(expression)
+    except CalcError as e:
+        await ctx.send(f"❌ {e}", delete_after=10)
+        return
+    except Exception:
+        await ctx.send("❌ คำนวณไม่ได้ ตรวจสอบรูปแบบสมการอีกครั้ง", delete_after=10)
+        return
+
+    await ctx.send(f"🧮 `{expression.strip()}` = **{format_calc_result(result)}**")
+
+
+@calc_cmd.error
+async def calc_cmd_error(ctx: commands.Context, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("⚠️ ใส่สมการด้วย เช่น `!w cal ((3+5) x (4-2) / 2) x (2 + 5)`", delete_after=8)
+    else:
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: `{error}`", delete_after=10)
+        raise error
 
 
 @map_search.error
