@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-07-14T22:31:27+07:00",
-    "count": 8,
+    "generated_at": "2026-07-22T15:45:51+07:00",
+    "count": 9,
     "terms": [
         {
             "id": 9,
@@ -53,6 +53,15 @@
             "english": "Quantum",
             "chinese": "量子",
             "meaning": "",
+            "notes": "",
+            "category": null
+        },
+        {
+            "id": 12,
+            "thai": "ควันตัมแบบเรียกคนไวๆ",
+            "english": "quantum",
+            "chinese": "帅哥美女快进这个房间：量子999999",
+            "meaning": "โหมดควันตัม ตัวย่อ",
             "notes": "",
             "category": null
         },
